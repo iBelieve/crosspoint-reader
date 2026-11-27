@@ -7,6 +7,14 @@ add_executable(KOReaderXPathResolverTest
   ${REPO_ROOT}/lib/expat/xmltok.c
 )
 
+# Vendored expat: not ours to make warning-clean.
+set_source_files_properties(
+  ${REPO_ROOT}/lib/expat/xmlparse.c
+  ${REPO_ROOT}/lib/expat/xmlrole.c
+  ${REPO_ROOT}/lib/expat/xmltok.c
+  PROPERTIES COMPILE_OPTIONS -w
+)
+
 target_include_directories(KOReaderXPathResolverTest PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/stubs
   ${REPO_ROOT}/lib/KOReaderSync

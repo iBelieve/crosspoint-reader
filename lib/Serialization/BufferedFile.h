@@ -149,9 +149,13 @@ inline void writeString(BufferedFileWriter& out, const std::string& s) {
   out.write(s.data(), len);
 }
 
+// A short read of the length prefix yields an empty string, as in Serialization.h.
 inline void readString(BufferedFileReader& in, std::string& s) {
-  uint32_t len;
-  readPod(in, len);
+  uint32_t len = 0;
+  if (in.read(&len, sizeof(len)) != sizeof(len)) {
+    s.clear();
+    return;
+  }
   s.resize(len);
   if (len > 0) {
     in.read(&s[0], len);

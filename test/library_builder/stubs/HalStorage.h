@@ -138,8 +138,9 @@ class HalFile {
   size_t getName(char* out, const size_t size) {
     const std::string name = path.substr(path.find_last_of('/') + 1);
     if (size > 0) {
-      std::strncpy(out, name.c_str(), size);
-      out[size - 1] = '\0';
+      const size_t n = std::min(name.size(), size - 1);
+      std::memcpy(out, name.data(), n);
+      out[n] = '\0';
     }
     return name.size();
   }

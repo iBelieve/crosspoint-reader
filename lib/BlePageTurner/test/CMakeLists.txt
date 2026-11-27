@@ -30,7 +30,10 @@ target_include_directories(bleturner_test_flags INTERFACE
   ${BLETURNER_ROOT}/include ${BLETURNER_ROOT}/src
   ${BLETURNER_ROOT}/../../freeink-sdk/libs/network/BleKeyboardHost/include
 )
-target_compile_options(bleturner_test_flags INTERFACE -Wall -Wextra -Werror)
+target_compile_options(bleturner_test_flags INTERFACE -Wall -Wextra)
+if(NOT DEFINED CROSSPOINT_WERROR OR CROSSPOINT_WERROR)
+  target_compile_options(bleturner_test_flags INTERFACE -Werror)
+endif()
 
 # ArduinoJson at the version the firmware pins (platformio.ini: bblanchon/ArduinoJson @ 7.4.2). A
 # local copy works too: only its src/ is used, never its own build.
