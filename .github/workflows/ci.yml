@@ -201,16 +201,32 @@ jobs:
           if-no-files-found: error
 
   unit-tests:
+    name: Unit tests (${{ matrix.cc }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Warnings fail the host build, and GCC and Clang warn differently.
+        include:
+          - cc: gcc
+            cxx: g++
+          - cc: clang
+            cxx: clang++
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Test firmware comment and measurements
+        if: matrix.cc == 'gcc'
         run: |
           python3 -m unittest discover -s test -p test_firmware_stats.py
           node --test test/firmware_comment.test.js
+
+      - name: Test web UI plugin navigation
+        if: matrix.cc == 'gcc'
+        # The browser test uses the runner's preinstalled Chrome and skips without it.
+        run: node --test test/test_webui_plugin_navigation.cjs test/test_webui_plugin_navigation_browser.cjs
 
       - name: Install build tools
         run: |
@@ -224,6 +240,9 @@ jobs:
           key: ${{ runner.os }}-googletest-${{ hashFiles('test/CMakeLists.txt') }}
 
       - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: cmake -S test -B build/test -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build

@@ -6,6 +6,8 @@
 #include <Serialization.h>
 #include <Utf8.h>
 
+#include <cstring>
+
 namespace {
 
 template <typename Predicate>
@@ -97,7 +99,7 @@ std::unique_ptr<PageLine> PageLine::deserialize(HalFile& file) {
   return line;
 }
 
-void PageImage::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) {
+void PageImage::render(GfxRenderer& renderer, const int /*fontId*/, const int xOffset, const int yOffset) {
   // Images don't use fontId or text rendering
   imageBlock->render(renderer, xPos + xOffset, yPos + yOffset);
 }
@@ -177,7 +179,9 @@ std::unique_ptr<PageHorizontalRule> PageHorizontalRule::deserialize(HalFile& fil
 PageDropCap::PageDropCap(const int32_t fontId, const uint16_t scale256, const EpdFontFamily::Style style,
                          const char* utf8, const int16_t xPos, const int16_t yPos)
     : PageElement(xPos, yPos), fontId(fontId), scale256(scale256), style(style) {
-  strncpy(text, utf8, MAX_TEXT_BYTES);
+  const size_t len = strnlen(utf8, MAX_TEXT_BYTES);
+  memcpy(text, utf8, len);
+  text[len] = '\0';
 }
 
 void PageDropCap::render(GfxRenderer& renderer, const int sectionFontId, const int xOffset, const int yOffset) {

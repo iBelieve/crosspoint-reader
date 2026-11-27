@@ -333,7 +333,7 @@ static uchar stype(ucschar c) {
 static ucschar shape_form(ucschar c, uchar form) {
   if (c >= SHAPE_FIRST && c <= SHAPE_LAST) {
     const uchar form_b = shapetypes[c - SHAPE_FIRST].form_b;
-    return form_b ? 0xFE00 + form_b + form : c;
+    return form_b ? (ucschar)(0xFE00 + form_b + form) : c;
   }
 
   int i = -1, j = lengthof(xshapeforms);

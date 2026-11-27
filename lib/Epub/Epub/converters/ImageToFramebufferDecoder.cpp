@@ -4,7 +4,7 @@
 #include <Logging.h>
 
 bool ImageToFramebufferDecoder::validateAndStoreDimensions(const int64_t width, const int64_t height,
-                                                           ImageDimensions& out, const char* format) {
+                                                           ImageDimensions& out, [[maybe_unused]] const char* format) {
   if (width <= 0 || height <= 0) {
     LOG_ERR("IMG", "Invalid %s dimensions: %lldx%lld", format, static_cast<long long>(width),
             static_cast<long long>(height));
@@ -38,7 +38,8 @@ void ImageToFramebufferDecoder::yieldDuringDecode(uint32_t& lastYieldMs) {
   }
 }
 
-void ImageToFramebufferDecoder::warnUnsupportedFeature(const std::string& feature, const std::string& imagePath) {
+void ImageToFramebufferDecoder::warnUnsupportedFeature([[maybe_unused]] const std::string& feature,
+                                                       [[maybe_unused]] const std::string& imagePath) {
   LOG_ERR("IMG", "Warning: Unsupported feature '%s' in image '%s'. Image may not display correctly.", feature.c_str(),
           imagePath.c_str());
 }

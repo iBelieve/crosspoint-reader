@@ -22,6 +22,15 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Keep in step with bblanchon/ArduinoJson in platformio.ini.
+FetchContent_Declare(
+  arduinojson
+  GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+  GIT_TAG v7.4.2
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(arduinojson)
+
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 # lib/OtShaper, the Indic shaping engine, for tests that shape.
@@ -33,11 +42,28 @@ target_include_directories(crosspoint_test_common INTERFACE
   ${REPO_ROOT}
   ${REPO_ROOT}/lib
 )
+# Warnings fail the build. Omitted struct fields are zero-initialized on purpose
+# (generated font headers and designated initializers rely on it).
 target_compile_options(crosspoint_test_common INTERFACE
   -Wall
   -Wextra
   -pedantic
+  -Wno-missing-field-initializers
+  -Werror
 )
+
+# GCC reports false out-of-bounds accesses inside libstdc++'s std::sort on
+# partly filled fixed arrays. Source properties are per directory, so each
+# target that compiles these files calls this.
+function(crosspoint_allow_sort_array_bounds)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(
+      ${REPO_ROOT}/lib/Epub/Epub/css/CssParser.cpp
+      ${REPO_ROOT}/lib/LibraryIndex/LibraryText.cpp
+      PROPERTIES COMPILE_OPTIONS -Wno-array-bounds
+    )
+  endif()
+endfunction()
 
 enable_testing()
 include(GoogleTest)
@@ -79,6 +105,7 @@ add_subdirectory(chapter_position)
 add_subdirectory(book_metadata_cache)
 add_subdirectory(home_button)
 add_subdirectory(button_press_navigation)
+add_subdirectory(serialization)
 
 add_subdirectory(inflate_stream)
 add_subdirectory(inflate_reader)
@@ -106,6 +133,8 @@ add_subdirectory(plugin_catalog_paging)
 add_subdirectory(plugin_manifest_classification)
 add_subdirectory(plugin_picker_layout)
 add_subdirectory(protected_paths)
+add_subdirectory(clipping_sync)
+add_subdirectory(sync_extensions)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME VectorFontIdentity COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_vector_font_identity.py)
@@ -128,3 +157,8 @@ add_test(NAME clipping_highlight_planes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CU
 add_test(NAME clipping_selection_text COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_clipping_selection_text.py)
 
 add_test(NAME recursive_dictionary COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_recursive_dictionary.py)
+add_test(NAME builtin_header_layout COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_builtin_header_layout.py)
+add_test(NAME dictionary_setting_name COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_dictionary_setting_name.py)
+add_test(NAME dictionary_side_button_navigation COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_dictionary_side_button_navigation.py)
+add_test(NAME release_license COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_release_license.py)
+add_test(NAME text_settings_layout COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_text_settings_layout.py)

@@ -78,7 +78,7 @@ TEST_F(GifBmpTest, WritesCroppedAndFitCoverHeaders) {
 }
 
 TEST_F(GifBmpTest, WritesNativeAndScaledThumbnails) {
-  for (const auto [width, height] : {std::pair{8, 4}, {4, 4}, {32, 16}}) {
+  for (const auto& [width, height] : {std::pair{8, 4}, {4, 4}, {32, 16}}) {
     Output out;
     ASSERT_TRUE(GifToBmpConverter::gifFileTo1BitBmpStreamWithSize(file, out, width, height));
     checkBmp(out, width, width / 2, 1);

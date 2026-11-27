@@ -1356,7 +1356,9 @@ TEST_F(ChapterTableBorderTest, RichCellsPreserveParagraphStylesAndFollowingFlow)
   const char* expected[] = {"Firstcell", "Entryone", "Entrytwo", "Outside"};
   for (size_t i = 0; i < lines.size(); ++i) {
     EXPECT_STREQ(static_cast<const PageLine*>(lines[i])->getBlock()->wordText(0), expected[i]);
-    if (i > 0) EXPECT_GT(lines[i]->yPos, lines[i - 1]->yPos);
+    if (i > 0) {
+      EXPECT_GT(lines[i]->yPos, lines[i - 1]->yPos);
+    }
   }
   EXPECT_GE(lines[1]->xPos, 24);
   const auto& left = *static_cast<const PageLine*>(lines[1])->getBlock();

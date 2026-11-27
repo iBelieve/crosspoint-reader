@@ -18,13 +18,13 @@ class HalFile {
     pos = static_cast<size_t>(offset);
     return true;
   }
-  size_t read(void* dst, size_t len) {
+  int read(void* dst, size_t len) {
     if (!data) return 0;
     const size_t remaining = data->size() - pos;
     const size_t count = len < remaining ? len : remaining;
     if (count > 0) std::memcpy(dst, data->data() + pos, count);
     pos += count;
-    return count;
+    return static_cast<int>(count);
   }
   bool close() {
     data = nullptr;
