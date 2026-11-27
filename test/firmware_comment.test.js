@@ -189,3 +189,12 @@ test('a board missing from the develop build is not reported as a failed build',
   f.payloads[21] = zip({environment: 'x4c', sha, ram: 90, flash: 130, image: 200, base_sha: baseline});
   assert.match(await comparison(f), /X4 Classic: baseline unavailable — measurement missing/);
 });
+
+test('cancelled runs neither publish nor supersede a finished run', async () => {
+  const cancelled = fixture(); cancelled.run.conclusion = 'cancelled';
+  await publish(cancelled); assert.equal(cancelled.posted.length, 0);
+  const f = fixture(); const paginate = f.github.paginate;
+  f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+    ? [{...f.run, id: 21, conclusion: 'cancelled'}] : paginate(method, args);
+  await publish(f); assert.equal(f.posted.length, 1);
+});

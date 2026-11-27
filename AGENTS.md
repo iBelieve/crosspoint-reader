@@ -103,6 +103,7 @@ yourself; do not leave them for CI to find.
    `node --test test/firmware_comment.test.js`.
 3. **Static analysis:** `pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
 4. **Firmware build:** `pio run -e <env>` for each board the change affects.
+   CI builds boards other than `x4c` only on PRs with the `all-boards` label.
 5. **Any other linter or test job** in `.github/workflows/ci.yml`. Read it at
    the start of the task; CI is the list of record, and it grows.
 

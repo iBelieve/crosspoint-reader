@@ -119,7 +119,7 @@ pio run --target upload
 ```sh
 ./bin/clang-format-fix
 pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
-pio run
+pio run -e x4c
 ```
 
 Development builds apply the Git version only to sources that use

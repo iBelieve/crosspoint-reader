@@ -4,6 +4,12 @@ module.exports = async ({github, context, core}) => {
   const run = context.payload.workflow_run;
   const { owner, repo } = context.repo;
 
+  // A run cancelled by a newer push or a queued replacement has nothing to show.
+  if (run.conclusion === 'cancelled') {
+    core.notice(`Skipping cancelled run ${run.id}.`);
+    return;
+  }
+
   const headOwner = run.head_repository?.owner?.login;
   if (!headOwner) {
     core.notice(`No head repository found for ${run.head_sha}.`);
@@ -111,7 +117,7 @@ module.exports = async ({github, context, core}) => {
   });
   if (latestRuns.some(candidate => candidate.head_repository?.id === run.head_repository.id &&
       candidate.head_branch === run.head_branch &&
-      (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)))) {
+      candidate.conclusion !== 'cancelled' && (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)))) {
     core.notice('Skipping superseded run or attempt.');
     return;
   }
