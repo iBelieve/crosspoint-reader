@@ -1,8 +1,9 @@
 name: Web preview
 
 # Builds the simulator for the browser, tests it in headless Chromium, and
-# deploys it to Cloudflare Pages: pr-<number>.crosspoint-sim.pages.dev for a
-# pull request, develop.crosspoint-sim.pages.dev for develop. The deploy steps
+# deploys it to the crosspoint-sim Cloudflare Pages project: branch alias
+# pr-<number> for a pull request, develop for develop. The PR comment links
+# the alias URL wrangler reports. The deploy steps
 # are skipped until the CLOUDFLARE_API_TOKEN secret (Cloudflare Pages: Edit)
 # and the CLOUDFLARE_ACCOUNT_ID variable are set.
 
@@ -36,6 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # The PR head itself, not the merge with develop, so the preview
+          # matches the commit named in the label and comment.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           submodules: recursive
 
       - uses: actions/setup-python@v6
@@ -104,13 +108,27 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          wrangler="npx --yes wrangler@4"
-          if ! $wrangler pages project list | grep -qw "$PAGES_PROJECT"; then
-            $wrangler pages project create "$PAGES_PROJECT" --production-branch=develop
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT"
+          status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api")
+          if [ "$status" = 404 ]; then
+            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=develop
+          elif [ "$status" != 200 ]; then
+            echo "::error::Cloudflare Pages project lookup returned HTTP $status"
+            exit 1
           fi
-          $wrangler pages deploy sim-site --project-name="$PAGES_PROJECT" \
-            --branch="$PAGES_BRANCH" --commit-hash="$HEAD_SHA" --commit-dirty=true
-          echo "PREVIEW_URL=https://$PAGES_BRANCH.$PAGES_PROJECT.pages.dev" >> "$GITHUB_ENV"
+          npx --yes wrangler@4 pages deploy sim-site --project-name="$PAGES_PROJECT" \
+            --branch="$PAGES_BRANCH" --commit-hash="$HEAD_SHA" --commit-dirty=true | tee deploy.log
+          # The project's pages.dev subdomain can differ from its name (a
+          # suffix is added when the name is taken), so use what wrangler printed.
+          url=$(grep -oE 'Deployment alias URL: https://[^ ]+' deploy.log | awk '{print $NF}' | tail -1)
+          if [ -z "$url" ]; then
+            url=$(grep -oE 'https://[^ ]+\.pages\.dev' deploy.log | tail -1)
+          fi
+          if [ -z "$url" ]; then
+            echo "::error::could not find the preview URL in wrangler's output"
+            exit 1
+          fi
+          echo "PREVIEW_URL=$url" >> "$GITHUB_ENV"
 
       - name: Comment preview link
         if: env.PREVIEW_URL != '' && github.event_name == 'pull_request'

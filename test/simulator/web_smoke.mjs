@@ -4,7 +4,9 @@
 // Serves a site from test/simulator/web_site.py with the COOP/COEP headers
 // threads need, presses real keys, and fails unless the page shows Home, the
 // file browser, page 1 of the sample book, then page 2 after a page turn.
-// It also checks that reading progress survives a reload (IndexedDB SD card).
+// Then it checks that the book resumes on page 2 after a reload (IndexedDB SD
+// card), and that sleep followed by a key press wakes the firmware through a
+// page reload.
 //
 //   node test/simulator/web_smoke.mjs sim-site --out sim-web-artifacts
 //
@@ -90,11 +92,29 @@ try {
 
   // The SD card is saved every second; give it time, then reload.
   await sleep(2500);
-  const from = logs.length;
+  let from = logs.length;
   await page.reload();
   await waitLog(/SCREEN:.*Simulator Smoke/, from);
   await sleep(300);
   await shot('6-reloaded');
+  // Home selects the recent book: Confirm resumes it where it was left.
+  await step('Enter', new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), '7-resumed');
+
+  // S sleeps; any key wakes, which reloads the page as a power-button wake.
+  from = logs.length;
+  await press('s');
+  await waitLog(/Entering deep sleep/, from);
+  await sleep(300);
+  await shot('8-sleep');
+  from = logs.length;
+  await press('Enter');
+  await waitLog(/Starting CrossPoint/, from);
+  await waitLog(/Entering activity: (?!Boot|Sleep)/, from);
+  await sleep(500);
+  await shot('9-woken');
+  if (page.url().includes('CROSSPOINT_SIM_WAKE_REASON')) {
+    throw new Error(`wake reason left in the address bar: ${page.url()}`);
+  }
 } catch (e) {
   failure = e;
 } finally {
