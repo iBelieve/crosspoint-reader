@@ -1,36 +1,23 @@
 ## Summary
 
-* **What is the goal of this PR?** (e.g., Implements the new feature for file uploading.)
-* **What changes are included?**
+* **Goal:**
+* **Changes:**
 
-## Scope Check
+## Verification
 
-CrossPoint is intentionally narrow. See [SCOPE.md](../blob/master/SCOPE.md) and [ROADMAP.md](../blob/master/ROADMAP.md).
-Please confirm:
+Checks run, with results. Name any check that could not run and why.
 
-- [ ] I have read SCOPE.md and ROADMAP.md.
-- [ ] This PR is **not** a new built-in theme (themes are temporarily closed pending the move to SD-loaded themes).
-- [ ] This PR is **not** a new external network connector (sync engine, cloud storage, remote file access, etc.).
-- [ ] This PR is **not** an interactive app, writing tool, RSS/news/browser, media playback, or PDF feature.
-- [ ] The stock firmware does not already handle this well, **and** no other popular CrossPoint fork already does
-      (or, if one does, I explain why CrossPoint still needs it below).
-- [ ] If this PR touches `freeink-sdk/`, `lib/hal/`, the bootloader, OTA, or recovery code, I have coordinated with
-      the relevant maintainer.
+- [ ] `./bin/clang-format-fix -g`
+- [ ] Host tests (`ctest`)
+- [ ] `pio check`
+- [ ] `pio run -e <env>` for affected boards
+- [ ] New or changed logic has host tests
 
-**If this PR was opened against the previous (broader) scope and was already in flight under Phase 0, link the
-relevant Discussion or issue so reviewers can see the history.**
+## Device test plan
 
-## Additional Context
+Steps for the owner to run on hardware, with expected results. Write "none" for
+changes that cannot affect firmware.
 
-* Add any other information that might be helpful for the reviewer (e.g., performance implications, potential risks,
-  specific areas to focus on).
-* Memory / flash impact, if known.
+## Notes
 
----
-
-### AI Usage
-
-While CrossPoint doesn't have restrictions on AI tools in contributing, please be transparent about their usage as it
-helps set the right context for reviewers.
-
-Did you use AI tools to help write this code? _**< YES | PARTIALLY | NO >**_
+Memory and flash impact, risks, and anything the reviewer should look at first.

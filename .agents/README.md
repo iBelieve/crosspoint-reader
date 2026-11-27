@@ -5,9 +5,14 @@ The root `AGENTS.md` is the always-loaded policy and router. Detailed repository
 Inspect the relevant code and current behavior first. Use the root routing table
 to find guidance for changed decisions, then read only the relevant sections.
 Skill descriptions identify procedures, not an obligation to load every keyword
-match. Reuse instructions already in context. Firmware handoff is the only fixed
-multi-skill bundle; load it after implementation and main-agent self-review.
-Read-only inquiries and reviewers do not run implementation handoff.
+match. Reuse instructions already in context. Load firmware handoff after
+implementation and main-agent self-review. Read-only inquiries and reviewers do
+not run implementation handoff.
+
+The fork-specific policy lives in the root `AGENTS.md` ("This fork", "How
+agents work here", "Verification is not optional"), `SCOPE.md`,
+`rules/git-workflow.md`, and `skills/firmware-handoff/`. Keep fork policy in
+those places so upstream merges into the technical rules stay simple.
 
 `CLAUDE.md` links to the root guide. Each skill lives in a directory containing
 `SKILL.md`, with a matching frontmatter `name`. Descriptions identify when an
@@ -25,12 +30,13 @@ home rather than restoring `.skills/` or duplicating the root policy.
 - `coding-standards.md`: C/C++ conventions and platform pitfalls
 - `ui-activities.md`: orientation, input, UI, activities, tasks, and fonts
 - `testing-debugging.md`: build, formatting, CI, serial, crash, and verification procedures
-- `git-workflow.md`: repository context, branches, commits, and publication controls
+- `git-workflow.md`: repository context, branches, commits, PRs, and upstream sync
 - `generated-files-cache.md`: generated sources, i18n, local artifacts, and cache formats
 
-## Mandatory firmware review
+## Firmware review
 
-`firmware-handoff` dispatches four independent read-only axes:
+`firmware-handoff` runs one independent read-only review using these
+checklists (it may split them across up to four reviewers for large changes):
 
 - `review-correctness`
 - `review-architecture`
