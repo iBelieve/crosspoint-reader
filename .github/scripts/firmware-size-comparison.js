@@ -100,9 +100,9 @@ async function comparison({github, context, core, run, pullRequest, builds}) {
         baselineLink = ` <br>[CI run](${candidate.html_url})`;
         break;
       }
-      // develop builds only some boards, so a missing baseline may not be a failure.
+      // develop builds only x4c, so other boards' missing baselines are not failures.
       if (base.reason === baselineReason) {
-        base = result.missing ? {reason: 'no measurement in the develop build (develop builds only some boards)'} : result;
+        base = result.missing && build.env !== 'x4c' ? {reason: 'develop does not build this board'} : result;
       }
     }
     const image = cells(base.stats, head.stats, 'image');

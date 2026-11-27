@@ -151,6 +151,9 @@ test('lists only boards this run built', async () => {
   const workflow = require('node:fs').readFileSync('.github/workflows/ci.yml', 'utf8');
   assert.match(workflow, /name: Build \$\{\{ matrix\.env \}\}\n/);
   assert.match(workflow, /\|\| '\["x4c"\]'\) \}\}/);
+  const all = JSON.parse(workflow.match(/'all-boards'\) && '(\[[^']*\])'/)[1]);
+  const script = require('node:fs').readFileSync('.github/scripts/pr-firmware-comment.js', 'utf8');
+  assert.deepEqual([...script.matchAll(/\{ env: '([^']+)'/g)].map(m => m[1]).sort(), [...all].sort());
   const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
   await publish(f);
   assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
@@ -176,6 +179,10 @@ test('without a usable job list, lists x4c and boards that uploaded artifacts', 
 test('a board missing from the develop build is not reported as a failed build', async () => {
   const f = fixture(); f.records[10] = [];
   const body = await comparison(f);
-  assert.match(body, /baseline unavailable — no measurement in the develop build \(develop builds only some boards\)/);
+  assert.match(body, /baseline unavailable — develop does not build this board/);
   assert.doesNotMatch(body, /build may have failed/);
+  f.builds = [{env: 'x4c', device: 'X4 Classic'}];
+  f.records[20] = [{name: 'firmware-stats-x4c', id: 21}];
+  f.payloads[21] = zip({environment: 'x4c', sha, ram: 90, flash: 130, image: 200, base_sha: baseline});
+  assert.match(await comparison(f), /X4 Classic: baseline unavailable — measurement missing/);
 });

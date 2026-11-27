@@ -37,6 +37,7 @@ module.exports = async ({github, context, core}) => {
     return;
   }
 
+  // Keep in sync with the all-boards matrix in ci.yml.
   const allBuilds = [
     { env: 'default', name: 'firmware.bin', device: 'X3 / X4' },
     { env: 'sticky', name: 'firmware-sticky.bin', device: 'Sticky' },
@@ -71,9 +72,9 @@ module.exports = async ({github, context, core}) => {
       .filter((artifact) => !artifact.expired)
       .map((artifact) => [artifact.name, artifact]),
   );
-  // Without the job list, use x4c (built on every run) and boards that uploaded anything.
-  const builds = allBuilds.filter(build => built ? built.has(`Build ${build.env}`)
-    : build.env === 'x4c' || artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`));
+  // x4c builds on every run. Without the job list, add boards that uploaded anything.
+  const builds = allBuilds.filter(build => build.env === 'x4c' || (built ? built.has(`Build ${build.env}`)
+    : artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`)));
   const missingBuilds = builds.filter((build) => !artifacts.has(build.name));
   const shortSha = run.head_sha.slice(0, 7);
   let body = `${marker}\n### Firmware builds\n\n`;

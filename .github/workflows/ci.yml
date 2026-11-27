@@ -8,11 +8,11 @@ on:
     # Adding any label, even on a closed PR, starts a full run.
     types: [opened, synchronize, reopened, labeled]
 
-# A new push to a PR cancels its run in progress. A label run waits instead:
-# cancelling would fail Test Status on the same head SHA until it finishes.
+# A new push to a PR cancels its run in progress. Other PR events share the
+# head SHA, so they wait: a cancelled run fails Test Status on that SHA.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
 permissions:
   contents: read
@@ -74,8 +74,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-v2-${{ runner.os }}-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
-          restore-keys: pio-v2-${{ runner.os }}-
+          key: pio-v3-${{ runner.os }}-x4c-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
+          restore-keys: pio-v3-${{ runner.os }}-x4c-
 
       - name: Install cppcheck runtime dependency
         run: |

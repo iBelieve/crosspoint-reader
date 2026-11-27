@@ -101,7 +101,7 @@ yourself; do not leave them for CI to find.
 2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`,
    plus `python3 -m unittest discover -s test -p test_firmware_stats.py` and
    `node --test test/firmware_comment.test.js`.
-3. **Static analysis:** `pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
+3. **Static analysis:** `pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
 4. **Firmware build:** `pio run -e <env>` for each board the change affects.
 5. **Any other linter or test job** in `.github/workflows/ci.yml`. Read it at
    the start of the task; CI is the list of record, and it grows.

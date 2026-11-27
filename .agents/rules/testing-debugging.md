@@ -21,8 +21,8 @@ is an environment issue, not a completed firmware build.
 ### Code Quality
 
 Use `./bin/clang-format-fix` on every host (`-g` covers only unstaged edits), including formatter diagnostics;
-never invoke or probe raw `clang-format`. Run `pio check` on every C/C++
-change. The full required list is in
+never invoke or probe raw `clang-format`. Run `pio check -e x4c` on every
+C/C++ change. The full required list is in
 [Verification is not optional](../../AGENTS.md#verification-is-not-optional);
 `.github/workflows/ci.yml` is the list of record for linters and test jobs.
 New warnings and findings are fixed, not left for later.
@@ -78,7 +78,8 @@ CI builds only `x4c` (X4 Classic) by default. To build every board, add the
 `all-boards` label to the PR; it stays in effect for later pushes. Do this for
 changes to shared board code, the HAL, the SDK pin, or `platformio.ini`, and
 for work meant for upstream. Check that the PR's firmware comment then lists
-every board. Releases still build every board.
+every board. cppcheck covers only `x4c` either way. Releases still build every
+board.
 
 ### Serial Monitor Options
 
