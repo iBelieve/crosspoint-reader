@@ -35,7 +35,7 @@ fi
 # Format all files (or only modified files if -g is passed)
 
 # Use 'git ls-files' to get a list of all files tracked by git:
-# --modified: files tracked by git that have been modified (staged or unstaged)
+# --modified: tracked files with unstaged modifications only
 # --exclude-standard: ignores files in .gitignore
 # Additionally exclude files in 'lib/EpdFont/builtinFonts/' as they are script-generated.
 # Also exclude files in 'lib/Epub/Epub/hyphenation/generated/' as they are script-generated.

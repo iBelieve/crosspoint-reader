@@ -282,7 +282,7 @@ Everyone here is a volunteer, so please be respectful and patient. For governanc
 
 ## Community forks
 
-One of the best things about open source is that anyone can take the code in a different direction. If you need something outside CrossPoint's [scope](./SCOPE.md), check out the community forks:
+One of the best things about open source is that anyone can take the code in a different direction. If you need something outside upstream CrossPoint's [scope](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md), check out the community forks:
 
 - [CrossInk](https://github.com/uxjulia/CrossInk) — UX focused with minimal reading stats and broader customizations for the reading experience.
 

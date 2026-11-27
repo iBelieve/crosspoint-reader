@@ -70,11 +70,13 @@ The owner keeps these decisions:
   including upstream.
 - Force-pushing or rewriting history on a branch you did not create.
 - Tags, releases, and changes to release or OTA workflows' publishing steps.
+
+Decide these yourself, but flag them in the PR:
+
 - Changes to partitions, the bootloader, OTA or recovery code, the HAL, or the
-  SDK pin. These may be done, but the PR must flag them and state the update
-  and rollback risk.
-- A design choice that changes what a feature does for the owner, when the request
-  can be read more than one way. Pick the likely reading, say so, and continue.
+  SDK pin. State the update and rollback risk.
+- A design choice that changes what a feature does for the owner, when the
+  request can be read more than one way. Pick the likely reading and say which.
 
 Agents cannot test on hardware. Never claim a hardware result. Every firmware
 PR lists the device checks the owner should run, with expected results.
@@ -93,7 +95,9 @@ yourself; do not leave them for CI to find.
 1. **Format:** `git add` new files, then run `./bin/clang-format-fix` (all
    tracked files, as CI does; never raw `clang-format`). The `-g` flag only
    covers unstaged edits, so do not use it as the final check.
-2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`.
+2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`,
+   plus `python3 -m unittest discover -s test -p test_firmware_stats.py` and
+   `node --test test/firmware_comment.test.js`.
 3. **Static analysis:** `pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
 4. **Firmware build:** `pio run -e <env>` for each board the change affects.
 5. **Any other linter or test job** in `.github/workflows/ci.yml`. Read it at
@@ -115,14 +119,19 @@ Rules for these checks:
   check is not a pass. Then rely on CI for it and read the CI result before
   calling the PR ready.
 - Fix CI failures on your PR. Do not ask the owner to merge a red PR.
+- Before a PR is marked ready, and again before it is merged if its head
+  changed, run a code review at `xhigh` effort on the current head. In Claude
+  Code this is the built-in `code-review` skill. Other agents run an equivalent
+  independent correctness review of the whole diff. Fix real findings first.
 
 ## Firmware handoff
 
 For every change that can affect shipped firmware or its build (C/C++, build
 configuration, partitions, code-generation sources, translations, release
 scripts), complete [firmware-handoff](.agents/skills/firmware-handoff/SKILL.md)
-before marking the PR ready (a draft PR may be open earlier). It covers the checks above, one
-independent review pass, and the PR's test plan.
+before marking the PR ready (a draft PR may be open earlier). It covers the
+checks above, one independent review pass, the `xhigh` code review, and the
+PR's test plan.
 
 Documentation, pure tests, and host-only scripts need the relevant checks and a
 self-review against the same checklists, not the full handoff.

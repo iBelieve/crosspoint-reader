@@ -24,7 +24,7 @@ owner will use on the device regularly.
 * **Other interactive apps** when they suit an e-ink screen and the device's
   buttons: short, mostly static screens and little animation.
 * **Sync or import for those apps** (for example deck or progress import) when
-  the app needs it, following the network rules below.
+  the app needs it. Wi-Fi stays on only while the screen that uses it is open.
 
 ## 3. Out of scope, or ask first
 
@@ -47,8 +47,8 @@ The hardware is the same as upstream's, so the technical rules in
 * **Flash:** an optional feature must not grow builds, screens, or callers
   that do not use it. See
   [flash size](.agents/rules/hardware-resources.md#flash-size-unused-features-must-cost-nothing).
-* **Power:** no background tasks or Wi-Fi that outlive the screen that needs
-  them.
+* **Power:** by default, no background tasks or Wi-Fi that outlive the screen
+  that needs them. An exception needs the owner's approval (see section 3).
 * **Data on the SD card:** decks, texts, and app state live on the SD card in
   documented, versioned formats, not in firmware. See
   [cache versioning](.agents/rules/generated-files-cache.md#cache-file-format-versioning).

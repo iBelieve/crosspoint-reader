@@ -63,14 +63,25 @@ pass against the same checklists and say so in the PR.
 Verify each finding against reachable code. Fix the real ones together, explain
 rejected ones, and rerun the checks affected by the fixes. Ask the reviewer to
 re-check only when a fix changes behavior, ownership, resource use, an
-interface, or a stored format. Stop after two review rounds. A verified finding
-still open after that keeps the PR in draft; report it to the owner instead of
-starting a third round.
+interface, or a stored format. Stop after two review rounds. The PR stays in
+draft, and you report to the owner instead of starting a third round, when a
+verified finding is still open or a fix after round two changed behavior,
+ownership, resource use, an interface, or a stored format without review.
 
 **Done when:** no verified finding is unaddressed and checks pass on the final
 diff.
 
-## 5. Open the PR
+## 5. Code review at xhigh
+
+Run the `xhigh` code review from the
+[verification rules](../../../AGENTS.md#verification-is-not-optional) on the
+current head. Fix real findings and rerun affected checks. If the fixes are
+substantive, run it again on the new head.
+
+**Done when:** an `xhigh` review has run on the final head with no unaddressed
+real finding.
+
+## 6. Mark the PR ready
 
 Commit, push, and open the PR or mark it ready following the
 [git rules](../../rules/git-workflow.md). In the PR description, give:
