@@ -35,7 +35,8 @@ and diagnostic code. Reviewers inspect source and recorded results only.
 
 Add or update host tests for every behavior change the host build can reach.
 While iterating, rerun the smallest meaningful checks for the changed contract;
-before marking a PR ready, run the full verification list. Reuse green results until
+before marking a firmware or build PR ready, run the full verification list;
+documentation and host-only changes run the checks they can affect. Reuse green results until
 a change or failure invalidates them. Test-only, diagnostic,
 documentation, and host-only changes use relevant lighter checks unless they
 alter firmware output/build. Check ignored outputs before staging, using the

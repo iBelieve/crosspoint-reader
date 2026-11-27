@@ -13,7 +13,7 @@ than assuming remote names. In this fork, `origin` is normally
 - Authorization follows [How agents work here](../../AGENTS.md#how-agents-work-here),
   which lists the decisions the owner keeps. Agents may branch, commit, push
   their own branches, and open PRs.
-- PRs and issues go to `iBelieve/crosspoint-reader` only. Pass the repository
+- PRs (and issues, if enabled) go to `iBelieve/crosspoint-reader` only. Pass the repository
   explicitly (for example `gh pr create -R iBelieve/crosspoint-reader`, or the
   REST API `repos/iBelieve/crosspoint-reader/pulls` where GraphQL is blocked),
   since tools may resolve a fork's base to the upstream parent. Anything opened
@@ -76,14 +76,18 @@ below are from the repository root.
   fork", "How agents work here", "Verification is not optional", and "Firmware
   handoff" sections, the routing-table row for "New features, apps, ...", and
   the "Start here" wording ("tie it to the requirement", verifying for the
-  owner).
-  Upstream's "Human ownership" and "Mandatory firmware handoff" sections stay
-  deleted. The same applies to the fork edits in `.agents/README.md`,
-  `.agents/rules/testing-debugging.md`, `.agents/rules/ui-activities.md`,
-  `README.md` (scope links), and `ROADMAP.md` (note and
-  upstream links), and `GOVERNANCE.md` (upstream scope link). Take upstream's other changes in these files.
+  owner). Upstream's "Human ownership" and "Mandatory firmware handoff"
+  sections stay deleted. The same applies to the fork edits in
+  `.agents/README.md`, `.agents/rules/testing-debugging.md`,
+  `.agents/rules/ui-activities.md`, `README.md` (scope links), `ROADMAP.md`
+  (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
+  upstream's other changes in these files.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
-  upstream's version.
+  upstream's version, but adapt or drop any upstream policy wording in it
+  (human approval for commits, no agent PRs, interactive apps out of scope).
+- **Merge method:** a sync PR must land as a merge commit, not a squash, so
+  git records the upstream parent. If the repository allows only squash
+  merges, the owner merges the sync locally and pushes it.
 
 If you edit another file for fork policy, add it to this list. Then run the
 full verification list.

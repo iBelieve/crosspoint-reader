@@ -50,8 +50,10 @@ The hardware is the same as upstream's, so the technical rules in
 * **Power:** by default, no background tasks or Wi-Fi that outlive the screen
   that needs them. An exception needs the owner's approval (see section 3).
 * **Data on the SD card:** decks, texts, and app state live on the SD card in
-  documented, versioned formats, not in firmware. See
-  [cache versioning](.agents/rules/generated-files-cache.md#cache-file-format-versioning).
+  documented, versioned formats, not in firmware. Caches that can be rebuilt
+  follow [cache versioning](.agents/rules/generated-files-cache.md#cache-file-format-versioning).
+  User state that cannot be rebuilt (review history, progress, bookmarks) must
+  be migrated when its format changes, never discarded.
 * **Testable logic:** app logic (scheduling, parsing, indexing, storage) lives
   in `lib/` with host tests. The activity is a thin UI layer on top.
 
@@ -64,6 +66,7 @@ The fork regularly merges upstream `develop`. To keep those merges easy:
 * Make the smallest change needed in shared code (for example a menu entry or
   a hook), and keep it separate from the app's own logic.
 * A general fix or improvement to shared code that upstream would want belongs
-  in its own small branch, so it can also be offered upstream. Upstream's
+  in its own small branch cut from upstream `develop`, so it can also be
+  offered upstream without fork-only commits. Upstream's
   [SCOPE.md](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md)
   decides what it accepts.

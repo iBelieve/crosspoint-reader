@@ -76,7 +76,8 @@ diff.
 Commit all fixes and push, then run the `xhigh` code review from the
 [verification rules](../../../AGENTS.md#verification-is-not-optional) on the
 pushed PR head (open a draft PR first if none exists). Fix real findings,
-commit, push, and run it again on the new head. After two `xhigh` rounds that
+rerun the checks affected by the fixes, commit, push, and run it again on the
+new head. After two `xhigh` rounds that
 still find real issues, leave the PR in draft and report to the owner.
 
 **Done when:** an `xhigh` review has run on the pushed final head with no
@@ -95,7 +96,8 @@ Mark the PR ready following the
 - any change to partitions, bootloader, OTA/recovery code, the HAL, or the SDK
   pin, with its update and rollback risk.
 
-Never claim a hardware result. Watch CI and fix failures.
+Wait for CI on the reviewed head before marking it ready. If CI fails, fix it
+and go back to step 5 for the new head. Never claim a hardware result.
 
-**Done when:** the PR is open with green CI, the description covers the points
+**Done when:** the PR is marked ready on a reviewed head with green CI, the description covers the points
 above, and the owner has been told it is ready.

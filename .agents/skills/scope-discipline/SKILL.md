@@ -46,6 +46,8 @@ why; do not just hand over a menu.
 - Put the app's logic in its own `lib/` directory with host tests; keep the
   activity a thin UI layer.
 - Keep app data and state on the SD card in a documented, versioned format.
+  Migrate user state (review history, progress) on format changes; never
+  discard it.
 - Touch shared upstream code only where needed (menu entry, hook), so upstream
   merges stay easy.
 - Release all app memory and tasks when the app exits.

@@ -62,7 +62,8 @@ Agents may work end to end: create a branch, implement, run the checks, commit,
 push the branch, and open a PR against `develop`. Write the PR description
 yourself, using [the PR template](.github/PULL_REQUEST_TEMPLATE.md). Follow the
 [git rules](.agents/rules/git-workflow.md). Review subagents are the exception:
-they only inspect, and never write files, run builds, commit, push, or publish.
+they only inspect, and never write files, run tests or builds, add
+diagnostics, commit, push, publish, or flash.
 
 The owner keeps these decisions:
 
@@ -93,9 +94,10 @@ The owner relies on static analysis, linting, and tests to catch what they canno
 review line by line. A change is not done until its checks pass. Run them
 yourself; do not leave them for CI to find.
 
-1. **Format:** `git add` new files, then run `./bin/clang-format-fix` (all
-   tracked files, as CI does; never raw `clang-format`). The `-g` flag only
-   covers unstaged edits, so do not use it as the final check.
+1. **Format:** `git add` new files, run `./bin/clang-format-fix` (all tracked
+   files, as CI does; never raw `clang-format`), stage its changes, and confirm
+   `git diff --exit-code` is clean. The `-g` flag only covers unstaged edits,
+   so do not use it as the final check.
 2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`,
    plus `python3 -m unittest discover -s test -p test_firmware_stats.py` and
    `node --test test/firmware_comment.test.js`.
