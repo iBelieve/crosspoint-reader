@@ -69,6 +69,10 @@ def main():
         make_sample_epub(sd / BOOK)
         env.update(
             SDL_VIDEODRIVER="dummy",
+            # The simulator asks for an accelerated renderer, which the dummy
+            # driver lacks; without one SHOT saves nothing. Naming the
+            # software renderer makes SDL create it anyway.
+            SDL_RENDER_DRIVER="software",
             CROSSPOINT_SIM_SD=str(sd),
             CROSSPOINT_SIM_SCREEN_TEXT="1",
             CROSSPOINT_SIM_WAIT_TIMEOUT_MS="30000",
