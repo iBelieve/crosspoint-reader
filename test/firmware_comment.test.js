@@ -150,24 +150,32 @@ test('queued publishers in completion order 19, 21, 20 retain the latest comment
 test('lists only boards this run built', async () => {
   const workflow = require('node:fs').readFileSync('.github/workflows/ci.yml', 'utf8');
   assert.match(workflow, /name: Build \$\{\{ matrix\.env \}\}\n/);
+  assert.match(workflow, /\|\| '\["x4c"\]'\) \}\}/);
   const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
   await publish(f);
   assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
   assert.doesNotMatch(f.posted[0].body, /Sticky/);
 });
-test('without a job list, lists boards that uploaded artifacts', async () => {
-  const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
-  const paginate = f.github.paginate;
-  f.github.paginate = async (m, a) => { if (m === 'jobs') throw new Error('denied'); return paginate(m, a); };
-  await publish(f);
-  assert.doesNotMatch(f.posted[0].body, /Firmware unavailable/);
-  f.records[20] = []; f.posted.length = 0;
-  await publish(f);
-  assert.match(f.posted[0].body, /Firmware unavailable: X3 \/ X4, Sticky,/);
+test('without a usable job list, lists x4c and boards that uploaded artifacts', async () => {
+  for (const jobs of [[], new Error('denied')]) {
+    const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
+    if (Array.isArray(jobs)) f.setJobs(jobs);
+    else {
+      const paginate = f.github.paginate;
+      f.github.paginate = async (m, a) => { if (m === 'jobs') throw jobs; return paginate(m, a); };
+    }
+    await publish(f);
+    assert.match(f.posted[0].body, /X3 \/ X4 \(`firmware\.bin`\)/);
+    assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+    f.records[20] = []; f.posted.length = 0;
+    await publish(f);
+    assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+    assert.doesNotMatch(f.posted[0].body, /Sticky|X3 \/ X4/);
+  }
 });
-test('a board develop did not build is not reported as a failed baseline', async () => {
+test('a board missing from the develop build is not reported as a failed build', async () => {
   const f = fixture(); f.records[10] = [];
   const body = await comparison(f);
-  assert.match(body, /baseline unavailable — develop did not build this board/);
+  assert.match(body, /baseline unavailable — no measurement in the develop build \(develop builds only some boards\)/);
   assert.doesNotMatch(body, /build may have failed/);
 });

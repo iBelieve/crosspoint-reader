@@ -100,8 +100,10 @@ async function comparison({github, context, core, run, pullRequest, builds}) {
         baselineLink = ` <br>[CI run](${candidate.html_url})`;
         break;
       }
-      // develop builds only some boards, so a missing baseline is not a failure.
-      if (base.reason === baselineReason) base = result.missing ? {reason: 'develop did not build this board'} : result;
+      // develop builds only some boards, so a missing baseline may not be a failure.
+      if (base.reason === baselineReason) {
+        base = result.missing ? {reason: 'no measurement in the develop build (develop builds only some boards)'} : result;
+      }
     }
     const image = cells(base.stats, head.stats, 'image');
     const flash = cells(base.stats, head.stats, 'flash');

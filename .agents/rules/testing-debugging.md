@@ -74,11 +74,11 @@ coverage. Preserve pinned core/packages and patches. Release/RC board-specific
 asset naming must agree with OTA discovery. Fix CI failures on your PR before
 calling it ready.
 
-CI builds only `default` (X3/X4) and `x4c` (X4 Classic) by default. To build
-every board, add the `all-boards` label to the PR; it stays in effect for later
-pushes. Do this for changes to shared board code, the HAL, the SDK pin, or
-`platformio.ini`, and for work meant for upstream. Releases still build every
-board.
+CI builds only `x4c` (X4 Classic) by default. To build every board, add the
+`all-boards` label to the PR; it stays in effect for later pushes. Do this for
+changes to shared board code, the HAL, the SDK pin, or `platformio.ini`, and
+for work meant for upstream. Check that the PR's firmware comment then lists
+every board. Releases still build every board.
 
 ### Serial Monitor Options
 
