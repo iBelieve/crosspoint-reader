@@ -49,14 +49,12 @@ module.exports = async ({github, context, core}) => {
     { env: 'onepage', name: 'firmware-onepage.bin', device: 'OnePage' },
   ];
   // CI builds some boards only on request, so list only boards this run built.
-  let builds = allBuilds;
+  let built = null;
   try {
     const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
       owner, repo, run_id: run.id, filter: 'latest', per_page: 100,
     });
-    const built = new Set(jobs.filter(job => job.conclusion !== 'skipped').map(job => job.name));
-    const ran = allBuilds.filter(build => built.has(`Build ${build.env}`));
-    if (ran.length) builds = ran;
+    built = new Set(jobs.filter(job => job.conclusion !== 'skipped').map(job => job.name));
   } catch (error) {
     core.warning(`Could not list build jobs: ${error.message}`);
   }
@@ -72,6 +70,10 @@ module.exports = async ({github, context, core}) => {
       .filter((artifact) => !artifact.expired)
       .map((artifact) => [artifact.name, artifact]),
   );
+  // Without the job list, fall back to boards that uploaded anything.
+  let builds = allBuilds.filter(build => built ? built.has(`Build ${build.env}`)
+    : artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`));
+  if (!builds.length) builds = allBuilds;
   const missingBuilds = builds.filter((build) => !artifacts.has(build.name));
   const shortSha = run.head_sha.slice(0, 7);
   let body = `${marker}\n### Firmware builds\n\n`;

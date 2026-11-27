@@ -5,13 +5,13 @@ on:
     branches: [develop]
   pull_request:
     # `labeled` lets the all-boards label start a run without a new push.
+    # Adding any label starts a full run.
     types: [opened, synchronize, reopened, labeled]
-  workflow_dispatch:
-    inputs:
-      all_boards:
-        description: Build every board, not only the X4 boards
-        type: boolean
-        default: false
+
+# A new push or label on a PR replaces its run in progress.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -101,9 +101,9 @@ jobs:
       fail-fast: false
       matrix:
         # The owner's devices build on every run: default (X3/X4, ESP32-C3) and
-        # x4c (X4 Classic). The rest build only for the all-boards PR label or a
-        # manual run with all_boards, for example before sending work upstream.
-        env: ${{ fromJSON((inputs.all_boards || contains(github.event.pull_request.labels.*.name, 'all-boards')) && '["default","x4c","sticky","x4pro","papermono","metalio_eink4","eego_a4","picco","onepage"]' || '["default","x4c"]') }}
+        # x4c (X4 Classic). The rest build only on PRs with the all-boards label,
+        # for example before sending work upstream.
+        env: ${{ fromJSON(contains(github.event.pull_request.labels.*.name, 'all-boards') && '["default","x4c","sticky","x4pro","papermono","metalio_eink4","eego_a4","picco","onepage"]' || '["default","x4c"]') }}
     env:
       # Short board-specific names keep pull-request artifacts easy to identify.
       # The release workflow applies the published crosspoint-<version>-<device>.bin names.

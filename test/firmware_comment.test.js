@@ -13,7 +13,8 @@ function fixture() {
   const pullRequest = {number: 10, state: 'open', head: {sha}, base: {ref: 'develop'}};
   const records = {20: [{name: 'firmware-stats-default', id: 20}], 10: [{name: 'firmware-stats-default', id: 10}]};
   const payloads = {20: zip({environment: 'default', sha, ram: 90, flash: 130, image: 200, base_sha: baseline}), 10: zip({environment: 'default', sha: baseline, ram: 100, flash: 120, image: 150})};
-  let jobs = [{name: 'Build default', conclusion: 'success'}, {name: 'Build x4c', conclusion: 'success'}];
+  let jobs = [{name: 'Build default', conclusion: 'success'}, {name: 'Build x4c', conclusion: 'failure'},
+    {name: 'Build sticky', conclusion: 'skipped'}];
   let runs = [{id: 10, head_sha: baseline, event: 'push', head_branch: 'develop', html_url: 'https://example.test/run/10'}];
   const posted = [];
   const actions = {
@@ -30,7 +31,10 @@ function fixture() {
       if (method === 'artifacts') return records[args.run_id] || [];
       if (method === 'pulls') return [pullRequest];
       if (method === 'comments') return [];
-      if (method === 'jobs') return jobs;
+      if (method === 'jobs') {
+        assert.equal(args.run_id, run.id); assert.equal(args.filter, 'latest');
+        return jobs;
+      }
       if (method === 'runs') return args.event === 'push' ? runs : [run];
       throw new Error(method);
     },
@@ -143,16 +147,27 @@ test('queued publishers in completion order 19, 21, 20 retain the latest comment
   }
 });
 
-test('lists only boards this run built, falling back to all boards', async () => {
+test('lists only boards this run built', async () => {
+  const workflow = require('node:fs').readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.match(workflow, /name: Build \$\{\{ matrix\.env \}\}\n/);
   const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
   await publish(f);
   assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
   assert.doesNotMatch(f.posted[0].body, /Sticky/);
-  for (const jobs of [[], new Error('denied')]) {
-    const g = fixture(); g.records[20].push({name: 'firmware.bin', id: 30});
-    if (Array.isArray(jobs)) g.setJobs(jobs);
-    else { const paginate = g.github.paginate; g.github.paginate = async (m, a) => { if (m === 'jobs') throw jobs; return paginate(m, a); }; }
-    await publish(g);
-    assert.match(g.posted[0].body, /Firmware unavailable: Sticky, X4 Pro, X4 Classic,/);
-  }
+});
+test('without a job list, lists boards that uploaded artifacts', async () => {
+  const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
+  const paginate = f.github.paginate;
+  f.github.paginate = async (m, a) => { if (m === 'jobs') throw new Error('denied'); return paginate(m, a); };
+  await publish(f);
+  assert.doesNotMatch(f.posted[0].body, /Firmware unavailable/);
+  f.records[20] = []; f.posted.length = 0;
+  await publish(f);
+  assert.match(f.posted[0].body, /Firmware unavailable: X3 \/ X4, Sticky,/);
+});
+test('a board develop did not build is not reported as a failed baseline', async () => {
+  const f = fixture(); f.records[10] = [];
+  const body = await comparison(f);
+  assert.match(body, /baseline unavailable — develop did not build this board/);
+  assert.doesNotMatch(body, /build may have failed/);
 });
