@@ -1,6 +1,9 @@
 # CrossPoint Reader Roadmap
 
-This roadmap describes how CrossPoint is moving through the tighter scope defined in [SCOPE.md](SCOPE.md). It is
+> This is upstream CrossPoint's roadmap, kept for reference. It refers to
+> upstream's scope document, not this fork's [SCOPE.md](SCOPE.md).
+
+This roadmap describes how CrossPoint is moving through the tighter scope defined in [SCOPE.md](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md). It is
 intentionally phased: Phase 0 closed out the commitments already in flight before locking down to the stricter
 "fill gaps the stock firmware leaves" delineator.
 
@@ -20,7 +23,7 @@ hanging, and so we enter the stricter phases with a clean slate.
 * ✅ **Bookmarks** feature. First-class navigation markers in EPUBs.
 * ✅ **Transparent sleep screens.**
 
-Phase 0 is closed. The tighter scope in [SCOPE.md](SCOPE.md) is now fully enforced. "But it was on the old roadmap"
+Phase 0 is closed. The tighter scope in [SCOPE.md](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md) is now fully enforced. "But it was on the old roadmap"
 is not a valid argument for accepting a PR.
 
 ---
@@ -62,11 +65,11 @@ flash.
   script grouping, and CJK support are shipped (see [docs/sd-card-fonts.md](docs/sd-card-fonts.md)).
 * ✅ UI languages and localization. **Landed early.** The UI ships with 30+ translations, including RTL languages,
   and continues to receive improvements.
-* Moving themes off-firmware to SD-loaded assets (see SCOPE.md Section 6).
+* Moving themes off-firmware to SD-loaded assets (see upstream SCOPE.md).
 * **SD-loaded plugins.** Extend the device from the SD card without growing the firmware: plugin packages that add
   integrations and connectors, running through the web server and a whitelisted job queue instead of compiled-in
   code. This is how new "talk to a server" functionality gets added without paying the flash and RAM cost in the
-  core firmware, keeping the connector freeze in SCOPE.md intact.
+  core firmware, keeping the connector freeze in upstream SCOPE.md intact.
 * **Moving hyphenation files off-firmware.** Hyphenation rules vary per language and the files are large (German
   alone is ~200KB). Today these eat flash budget that should be available for the reader core. The plan is to build
   a downloader analogous to the existing font downloader and store the hyphenation files on SD, loading on
@@ -87,7 +90,7 @@ up here:
 * Active connectivity features (RSS, news, browsers).
 * PDF rendering as a first-class format.
 
-See [SCOPE.md](SCOPE.md) for the full rationale.
+See [SCOPE.md](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md) for the full rationale.
 
 ---
 

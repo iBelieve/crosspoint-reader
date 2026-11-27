@@ -69,7 +69,7 @@ consume that release frame. Keep independent touch usable.
 
 ### Input verification matrix
 
-The main agent runs applicable host checks; give the human device steps with
+The main agent runs applicable host checks; put device steps in the PR test plan, with
 button remapping and relevant orientations. Verify these changed paths:
 
 | Scenario | Expected result |

@@ -20,22 +20,29 @@ is an environment issue, not a completed firmware build.
 
 ### Code Quality
 
-Use `./bin/clang-format-fix -g` on every host, including formatter diagnostics;
-never invoke or probe raw `clang-format`. Run `pio check` when relevant.
+Use `./bin/clang-format-fix` on every host (`-g` covers only unstaged edits), including formatter diagnostics;
+never invoke or probe raw `clang-format`. Run `pio check` on every C/C++
+change. The full required list is in
+[Verification is not optional](../../AGENTS.md#verification-is-not-optional);
+`.github/workflows/ci.yml` is the list of record for linters and test jobs.
+New warnings and findings are fixed, not left for later.
 
 ### Testing and Verification Workflow
 
-[firmware-handoff](../skills/firmware-handoff/SKILL.md) owns firmware review rounds,
-final build ordering, and human acceptance. The main agent owns tests, builds,
+[firmware-handoff](../skills/firmware-handoff/SKILL.md) owns the firmware review
+pass, final checks, and the PR test plan. The main agent owns tests, builds,
 and diagnostic code. Reviewers inspect source and recorded results only.
 
-Run the smallest meaningful regression checks for the changed contract. Reuse
-green results until a change or failure invalidates them. Test-only, diagnostic,
+Add or update host tests for every behavior change the host build can reach.
+While iterating, rerun the smallest meaningful checks for the changed contract;
+before marking a firmware or build PR ready, run the full verification list;
+documentation and host-only changes run the checks they can affect. Reuse green results until
+a change or failure invalidates them. Test-only, diagnostic,
 documentation, and host-only changes use relevant lighter checks unless they
 alter firmware output/build. Check ignored outputs before staging, using the
 [generated-file rules](generated-files-cache.md#files-generated-by-build-scripts).
 
-Human device checks cover changed behavior, relevant orientations/remapping,
+Device checks in the PR test plan cover changed behavior, relevant orientations/remapping,
 and resource/cache effects. Changed input, display, or layout paths cover all
 four orientations: portrait, inverted, landscape CW, and landscape CCW.
 C3 baseline target: more than 50 KB free and no leaks;
@@ -64,8 +71,8 @@ Use serial traces to establish the failure path before changing resources.
 
 Inspect current matrices under `.github/workflows/` before claiming board
 coverage. Preserve pinned core/packages and patches. Release/RC board-specific
-asset naming must agree with OTA discovery. Fix existing CI failures affecting
-the change before handoff.
+asset naming must agree with OTA discovery. Fix CI failures on your PR before
+calling it ready.
 
 ### Serial Monitor Options
 
