@@ -44,8 +44,9 @@ The hardware is the same as upstream's, so the technical rules in
 * **Memory:** the ESP32-C3 has about 380 KB usable RAM and no PSRAM. A new app
   must fit next to the reader core and must release its memory when it exits.
   See [hardware-resources.md](.agents/rules/hardware-resources.md).
-* **Flash:** an app that is not in use must not cost other targets flash.
-  Gate device- or feature-specific code behind build flags where it is large.
+* **Flash:** an optional feature must not grow builds, screens, or callers
+  that do not use it. See
+  [flash size](.agents/rules/hardware-resources.md#flash-size-unused-features-must-cost-nothing).
 * **Power:** no background tasks or Wi-Fi that outlive the screen that needs
   them.
 * **Data on the SD card:** decks, texts, and app state live on the SD card in

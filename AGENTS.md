@@ -66,8 +66,13 @@ yourself, using [the PR template](.github/PULL_REQUEST_TEMPLATE.md). Follow the
 The owner keeps these decisions:
 
 - Merging to `develop`, and any push to `develop` or `master`.
+- Opening PRs or issues anywhere except `iBelieve/crosspoint-reader`,
+  including upstream.
 - Force-pushing or rewriting history on a branch you did not create.
 - Tags, releases, and changes to release or OTA workflows' publishing steps.
+- Changes to partitions, the bootloader, OTA or recovery code, the HAL, or the
+  SDK pin. These may be done, but the PR must flag them and state the update
+  and rollback risk.
 - A design choice that changes what a feature does for the owner, when the request
   can be read more than one way. Pick the likely reading, say so, and continue.
 
@@ -85,8 +90,10 @@ The owner relies on static analysis, linting, and tests to catch what they canno
 review line by line. A change is not done until its checks pass. Run them
 yourself; do not leave them for CI to find.
 
-1. **Format:** `./bin/clang-format-fix -g` (never raw `clang-format`).
-2. **Host tests:** `cmake -S test -B build/test -G Ninja && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`.
+1. **Format:** `git add` new files, then run `./bin/clang-format-fix` (all
+   tracked files, as CI does; never raw `clang-format`). The `-g` flag only
+   covers unstaged edits, so do not use it as the final check.
+2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`.
 3. **Static analysis:** `pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
 4. **Firmware build:** `pio run -e <env>` for each board the change affects.
 5. **Any other linter or test job** in `.github/workflows/ci.yml`. Read it at
@@ -114,7 +121,7 @@ Rules for these checks:
 For every change that can affect shipped firmware or its build (C/C++, build
 configuration, partitions, code-generation sources, translations, release
 scripts), complete [firmware-handoff](.agents/skills/firmware-handoff/SKILL.md)
-before opening the PR or marking it ready. It covers the checks above, one
+before marking the PR ready (a draft PR may be open earlier). It covers the checks above, one
 independent review pass, and the PR's test plan.
 
 Documentation, pure tests, and host-only scripts need the relevant checks and a

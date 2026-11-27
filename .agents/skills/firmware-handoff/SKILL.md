@@ -1,19 +1,20 @@
 ---
 name: firmware-handoff
-description: Final checks, one independent review, and the PR test plan for completed firmware/build changes. Use after implementation and self-review, before opening or readying a PR; excludes read-only audits and reviewer tasks.
+description: Final checks, one independent review, and the PR test plan for completed firmware/build changes. Use after implementation and self-review, before marking a PR ready; excludes read-only audits and reviewer tasks.
 ---
 
 # Firmware handoff
 
-Run after implementation and self-review, before opening the PR or marking it
-ready. The main agent owns the result; reviewer output is evidence, not
+Run after implementation and self-review, before marking the PR ready. A
+draft PR may already be open. The main agent owns the result; reviewer output is evidence, not
 authority.
 
 ## 1. Prepare the candidate
 
-Record the requirement, comparison base (`develop`), changed files, and diff.
-Account for every hunk; remove or separate anything the requirement does not
-explain. Self-review against the four review checklists below.
+Record the requirement, comparison base (`develop`), changed files, and diff,
+including uncommitted work and any SDK submodule changes. Account for every
+hunk. Leave unrelated work (especially the owner's uncommitted edits) out of
+the commit; never revert it. Self-review against the four review checklists below.
 
 **Done when:** every hunk is explained and the self-review is done.
 
@@ -35,8 +36,9 @@ reason and CI is relied on for it.
 ## 3. One independent review
 
 Launch one read-only reviewer subagent with a fresh context. Give it the
-requirement, repository path, base, diff, check results, and these four
-checklists, applying only those relevant to the change:
+requirement, repository path, base, the pinned diff and revision, check
+results, and these four checklists, applying only those relevant to the
+change. Give it the needed discussion but not your own analysis or verdict:
 
 - [review-correctness](../review-correctness/SKILL.md)
 - [review-architecture](../review-architecture/SKILL.md)
@@ -49,6 +51,8 @@ main agent." For a large or risky change (new app, memory ownership, HAL or
 storage format changes), you may split the checklists across up to four
 reviewers.
 
+Keep the candidate unchanged until the review returns.
+
 If the environment cannot run subagents, do a second, separate self-review
 pass against the same checklists and say so in the PR.
 
@@ -59,22 +63,25 @@ pass against the same checklists and say so in the PR.
 Verify each finding against reachable code. Fix the real ones together, explain
 rejected ones, and rerun the checks affected by the fixes. Ask the reviewer to
 re-check only when a fix changes behavior, ownership, resource use, an
-interface, or a stored format. Stop after two review rounds; report anything
-still unresolved in the PR instead of starting a third.
+interface, or a stored format. Stop after two review rounds. A verified finding
+still open after that keeps the PR in draft; report it to the owner instead of
+starting a third round.
 
 **Done when:** no verified finding is unaddressed and checks pass on the final
 diff.
 
 ## 5. Open the PR
 
-Commit, push, and open or update the PR following the
+Commit, push, and open the PR or mark it ready following the
 [git rules](../../rules/git-workflow.md). In the PR description, give:
 
 - old and new behavior, and who owns any new state or memory;
 - the main design tradeoff, if there is one;
 - checks run and results, including any that could not run;
 - a device test plan: steps, expected results, likely failure signs, and the
-  orientations, resources, and caches affected.
+  orientations, resources, and caches affected;
+- any change to partitions, bootloader, OTA/recovery code, the HAL, or the SDK
+  pin, with its update and rollback risk.
 
 Never claim a hardware result. Watch CI and fix failures.
 

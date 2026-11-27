@@ -1,5 +1,8 @@
 # CrossPoint Reader Roadmap
 
+> This is upstream CrossPoint's roadmap, kept for reference. It refers to
+> upstream's scope document, not this fork's [SCOPE.md](SCOPE.md).
+
 This roadmap describes how CrossPoint is moving through the tighter scope defined in [SCOPE.md](SCOPE.md). It is
 intentionally phased: Phase 0 closed out the commitments already in flight before locking down to the stricter
 "fill gaps the stock firmware leaves" delineator.

@@ -20,7 +20,7 @@ is an environment issue, not a completed firmware build.
 
 ### Code Quality
 
-Use `./bin/clang-format-fix -g` on every host, including formatter diagnostics;
+Use `./bin/clang-format-fix` on every host (`-g` covers only unstaged edits), including formatter diagnostics;
 never invoke or probe raw `clang-format`. Run `pio check` on every C/C++
 change. The full required list is in
 [Verification is not optional](../../AGENTS.md#verification-is-not-optional);

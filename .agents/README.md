@@ -9,10 +9,10 @@ match. Reuse instructions already in context. Load firmware handoff after
 implementation and main-agent self-review. Read-only inquiries and reviewers do
 not run implementation handoff.
 
-The fork-specific policy lives in the root `AGENTS.md` ("This fork", "How
-agents work here", "Verification is not optional"), `SCOPE.md`,
-`rules/git-workflow.md`, and `skills/firmware-handoff/`. Keep fork policy in
-those places so upstream merges into the technical rules stay simple.
+Fork-specific policy lives in the root `AGENTS.md` ("This fork" through
+"Firmware handoff"), `SCOPE.md`, and the files listed under
+[Syncing With Upstream](rules/git-workflow.md#syncing-with-upstream). Add new
+fork policy to those files, and update that list if you edit another one.
 
 `CLAUDE.md` links to the root guide. Each skill lives in a directory containing
 `SKILL.md`, with a matching frontmatter `name`. Descriptions identify when an
