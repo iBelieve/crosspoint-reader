@@ -1,4 +1,4 @@
-"""Sample EPUB for simulator runs (smoke test, previews)."""
+"""Sample EPUB for simulator runs, used by smoke.py."""
 
 import zipfile
 

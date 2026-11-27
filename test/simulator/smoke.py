@@ -68,6 +68,8 @@ def main():
     if not program.is_file():
         parser.error(f"simulator binary not found: {args.program} (build with: pio run -e simulator)")
     out = args.out.resolve()
+    if ";" in str(out):
+        parser.error("--out must not contain ';' (it separates input script steps)")
     out.mkdir(parents=True, exist_ok=True)
     # The simulator exits 0 even when a SHOT saves nothing, so stale files
     # from an earlier run must not count.
@@ -100,6 +102,9 @@ def main():
                 status = result.returncode
             except subprocess.TimeoutExpired:
                 status = None
+            except OSError as error:
+                print(f"simulator smoke test FAILED\n  could not start {program}: {error}", file=sys.stderr)
+                return 1
 
     log_text = log_path.read_text(errors="replace")
     missing = [SHOTS[i] for i in range(len(SHOTS)) if not shot(out, i).is_file()]
