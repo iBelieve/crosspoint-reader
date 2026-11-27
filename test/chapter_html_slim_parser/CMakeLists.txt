@@ -42,3 +42,10 @@ target_link_libraries(ChapterHtmlSlimParserTest PRIVATE
 )
 
 gtest_discover_tests(ChapterHtmlSlimParserTest)
+crosspoint_allow_sort_array_bounds()
+# The test reaches private members with "#define class struct".
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # Source options come after -Wall, which would turn these back on.
+  set_source_files_properties(ChapterHtmlSlimParserTest.cpp PROPERTIES COMPILE_OPTIONS
+    "-Wno-keyword-macro;-Wno-mismatched-tags")
+endif()

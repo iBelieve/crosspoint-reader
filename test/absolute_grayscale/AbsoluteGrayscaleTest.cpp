@@ -56,7 +56,9 @@ TEST(AbsoluteGrayscale, OverlayStillLeavesBlackAndWhiteToTheBase) {
   for (unsigned p = 0; p < 2; ++p) {
     for (unsigned x = 0; x < 8; ++x) {
       const auto pixel = grayPlanePixel(x % 4, p == 1, false);
-      if (x % 4 == 0 || x % 4 == 3) EXPECT_FALSE(pixel.write);
+      if (x % 4 == 0 || x % 4 == 3) {
+        EXPECT_FALSE(pixel.write);
+      }
       if (pixel.write && !pixel.black) planes[p] |= 0x80 >> x;
     }
   }

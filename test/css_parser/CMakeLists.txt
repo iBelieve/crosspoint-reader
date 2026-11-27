@@ -16,3 +16,4 @@ target_link_libraries(CssParserTest PRIVATE
 )
 
 gtest_discover_tests(CssParserTest)
+crosspoint_allow_sort_array_bounds()
