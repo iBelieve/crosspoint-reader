@@ -40,8 +40,9 @@ def input_script(out):
         f"0:SHOT:{shot(out, 0)}",
         "300:ENTER",
         "0:WAIT:Entering activity: FileBrowser",
-        # The browser may list the file name or the book title.
-        "0:WAIT:SCREEN:.*[Ss]moke",
+        # The browser lists the name, with or without ".epub", or the title.
+        # The page text never has "smoke" as a separate word.
+        "0:WAIT:SCREEN:.*([:|] smoke( \\||\\.epub|$)|Simulator Smoke)",
         f"0:SHOT:{shot(out, 1)}",
         "300:ENTER",
         f"0:WAIT:SCREEN:.*{PAGE_ONE_WORD}",
@@ -73,7 +74,7 @@ def main():
     for index in range(len(SHOTS)):
         shot(out, index).unlink(missing_ok=True)
 
-    env = {key: value for key, value in os.environ.items() if not key.startswith("CROSSPOINT_SIM_")}
+    env = {key: value for key, value in os.environ.items() if not key.startswith(("CROSSPOINT_SIM_", "CROSSPOINT_EMU_"))}
     with tempfile.TemporaryDirectory(prefix="crosspoint-sim-smoke-") as temp:
         sd = Path(temp) / "sd"
         sd.mkdir()

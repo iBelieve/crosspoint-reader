@@ -257,10 +257,8 @@ jobs:
           sudo apt-get install -y libsdl2-dev libssl-dev
 
       - name: Install PlatformIO Core
-        # Same core as the device builds; the i18n and HTML generators need pyyaml.
-        run: |
-          uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
-          uv pip install --system -U "pyyaml>=6.0.2"
+        # Same core as the device builds.
+        run: uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
 
       - name: Build simulator
         run: pio run -e simulator

@@ -12,7 +12,7 @@ def chapter(title, word):
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>{title}</title></head>
-<body><h1>{title}</h1><p>{word} marks this page for the simulator smoke test.</p></body>
+<body><h1>{title}</h1><p>{word} marks this page for the simulator check.</p></body>
 </html>"""
 
 
