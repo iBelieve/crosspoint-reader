@@ -9,7 +9,7 @@ function zip(stats) {
   return execFileSync('python3', ['-c', 'import io,sys,zipfile; b=io.BytesIO(); z=zipfile.ZipFile(b,"w"); z.writestr("firmware-stats.json",sys.stdin.read()); z.close(); sys.stdout.buffer.write(b.getvalue())'], {input: JSON.stringify(stats)});
 }
 function fixture() {
-  const run = {id: 20, workflow_id: 5, head_sha: sha, head_branch: 'feature', head_repository: {id: 2, owner: {login: 'contributor'}}, run_attempt: 1, conclusion: 'success'};
+  const run = {id: 20, workflow_id: 5, head_sha: sha, head_branch: 'feature', head_repository: {id: 2, owner: {login: 'contributor'}}, run_attempt: 1, status: 'completed', conclusion: 'success'};
   const pullRequest = {number: 10, state: 'open', head: {sha}, base: {ref: 'develop'}};
   const records = {20: [{name: 'firmware-stats-default', id: 20}], 10: [{name: 'firmware-stats-default', id: 10}]};
   const payloads = {20: zip({environment: 'default', sha, ram: 90, flash: 130, image: 200, base_sha: baseline}), 10: zip({environment: 'default', sha: baseline, ram: 100, flash: 120, image: 150})};
@@ -197,4 +197,8 @@ test('cancelled runs neither publish nor supersede a finished run', async () => 
   f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
     ? [{...f.run, id: 21, conclusion: 'cancelled'}] : paginate(method, args);
   await publish(f); assert.equal(f.posted.length, 1);
+  const g = fixture(); const paginateG = g.github.paginate;
+  g.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+    ? [{...g.run, id: 21, status: 'in_progress', conclusion: null}] : paginateG(method, args);
+  await publish(g); assert.equal(g.posted.length, 1);
 });

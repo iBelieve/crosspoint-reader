@@ -110,14 +110,15 @@ module.exports = async ({github, context, core}) => {
       comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker),
   );
 
-  // A delayed completion or rerun must not replace a newer run for this head.
+  // A delayed completion or rerun must not replace a newer finished run for this
+  // head. A newer run still in progress overwrites this comment when it finishes.
   const latestRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
     owner, repo, workflow_id: run.workflow_id, event: 'pull_request',
     head_sha: run.head_sha, per_page: 100,
   });
   if (latestRuns.some(candidate => candidate.head_repository?.id === run.head_repository.id &&
       candidate.head_branch === run.head_branch &&
-      candidate.conclusion !== 'cancelled' && (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)))) {
+      candidate.status === 'completed' && candidate.conclusion !== 'cancelled' && (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)))) {
     core.notice('Skipping superseded run or attempt.');
     return;
   }
