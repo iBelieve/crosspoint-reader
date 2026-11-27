@@ -12,3 +12,5 @@ target_include_directories(InflateStreamTest PRIVATE
 )
 target_link_libraries(InflateStreamTest PRIVATE crosspoint_test_common GTest::gtest_main)
 gtest_discover_tests(InflateStreamTest)
+# Vendored code: not ours to make warning-clean.
+set_source_files_properties(${REPO_ROOT}/lib/miniz/src/miniz_impl.c PROPERTIES COMPILE_OPTIONS -w)

@@ -52,16 +52,25 @@ inline bool tryWriteString(HalFile& file, const std::string& s) {
   return tryWritePod(file, len) && (len == 0 || file.write(reinterpret_cast<const uint8_t*>(s.data()), len) == len);
 }
 
+// readString overloads: a short read of the length prefix (truncated file)
+// yields an empty string.
 inline void readString(std::istream& is, std::string& s) {
-  uint32_t len;
+  uint32_t len = 0;
   readPod(is, len);
+  if (!is) {
+    s.clear();
+    return;
+  }
   s.resize(len);
   is.read(&s[0], len);
 }
 
 inline void readString(HalFile& file, std::string& s) {
-  uint32_t len;
-  readPod(file, len);
+  uint32_t len = 0;
+  if (!tryReadPod(file, len)) {
+    s.clear();
+    return;
+  }
   s.resize(len);
   file.read(&s[0], len);
 }

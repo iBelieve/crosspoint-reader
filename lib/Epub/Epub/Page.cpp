@@ -6,6 +6,8 @@
 #include <Serialization.h>
 #include <Utf8.h>
 
+#include <cstring>
+
 namespace {
 
 template <typename Predicate>
@@ -97,7 +99,7 @@ std::unique_ptr<PageLine> PageLine::deserialize(HalFile& file) {
   return line;
 }
 
-void PageImage::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) {
+void PageImage::render(GfxRenderer& renderer, const int /*fontId*/, const int xOffset, const int yOffset) {
   // Images don't use fontId or text rendering
   imageBlock->render(renderer, xPos + xOffset, yPos + yOffset);
 }
@@ -177,7 +179,9 @@ std::unique_ptr<PageHorizontalRule> PageHorizontalRule::deserialize(HalFile& fil
 PageDropCap::PageDropCap(const int32_t fontId, const uint16_t scale256, const EpdFontFamily::Style style,
                          const char* utf8, const int16_t xPos, const int16_t yPos)
     : PageElement(xPos, yPos), fontId(fontId), scale256(scale256), style(style) {
-  strncpy(text, utf8, MAX_TEXT_BYTES);
+  const size_t len = strnlen(utf8, MAX_TEXT_BYTES);
+  memcpy(text, utf8, len);
+  text[len] = '\0';
 }
 
 void PageDropCap::render(GfxRenderer& renderer, const int sectionFontId, const int xOffset, const int yOffset) {
@@ -365,8 +369,11 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
     return nullptr;
   }
 
-  uint16_t count;
-  serialization::readPod(file, count);
+  uint16_t count = 0;
+  if (!serialization::tryReadPod(file, count)) {
+    LOG_ERR("PGE", "Deserialization failed: truncated element count");
+    return nullptr;
+  }
 
   // Reserve up front so a page load costs one allocation for the element vector
   // instead of a grow-copy-free cycle every doubling. `count` is untrusted (it
@@ -379,8 +386,11 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
   page->elements.reserve(std::min(count, RESERVE_CAP));
 
   for (uint16_t i = 0; i < count; i++) {
-    uint8_t tag;
-    serialization::readPod(file, tag);
+    uint8_t tag = 0;
+    if (!serialization::tryReadPod(file, tag)) {
+      LOG_ERR("PGE", "Deserialization failed: truncated element tag");
+      return nullptr;
+    }
 
     if (tag == TAG_PageLine) {
       auto pl = PageLine::deserialize(file);
@@ -419,9 +429,8 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
   }
 
   // Deserialize footnotes
-  uint16_t fnCount;
-  serialization::readPod(file, fnCount);
-  if (fnCount > MAX_FOOTNOTES_PER_PAGE) {
+  uint16_t fnCount = 0;
+  if (!serialization::tryReadPod(file, fnCount) || fnCount > MAX_FOOTNOTES_PER_PAGE) {
     LOG_ERR("PGE", "Invalid footnote count %u", fnCount);
     return nullptr;
   }
@@ -437,9 +446,8 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
     entry.href[sizeof(entry.href) - 1] = '\0';
   }
 
-  uint16_t linkCount;
-  serialization::readPod(file, linkCount);
-  if (linkCount > MAX_LINKS_PER_PAGE) {
+  uint16_t linkCount = 0;
+  if (!serialization::tryReadPod(file, linkCount) || linkCount > MAX_LINKS_PER_PAGE) {
     LOG_ERR("PGE", "Invalid link count %u", linkCount);
     return nullptr;
   }

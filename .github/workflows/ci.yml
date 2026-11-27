@@ -199,16 +199,43 @@ jobs:
           if-no-files-found: error
 
   unit-tests:
-    runs-on: ubuntu-latest
+    name: Unit tests (${{ matrix.cc }})
+    # Warnings fail this build, so pin the image and its compilers (GCC 13, Clang 18).
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Warnings fail the host build, and GCC and Clang warn differently.
+        include:
+          - cc: gcc-13
+            cxx: g++-13
+          - cc: clang-18
+            cxx: clang++-18
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
 
+      # The browser test needs Node 22's global WebSocket.
+      - uses: actions/setup-node@v4
+        if: matrix.cc == 'gcc-13'
+        with:
+          node-version: '22'
+
       - name: Test firmware comment and measurements
+        if: matrix.cc == 'gcc-13'
         run: |
           python3 -m unittest discover -s test -p test_firmware_stats.py
           node --test test/firmware_comment.test.js
+
+      - name: Test web UI plugin navigation
+        if: matrix.cc == 'gcc-13'
+        timeout-minutes: 5
+        # Ubuntu 24.04's AppArmor can block the user namespaces Chrome's sandbox needs.
+        # The browser test uses the runner's preinstalled Chrome and skips without it.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          node --test test/test_webui_plugin_navigation.cjs test/test_webui_plugin_navigation_browser.cjs
 
       - name: Install build tools
         run: |
@@ -222,6 +249,9 @@ jobs:
           key: ${{ runner.os }}-googletest-${{ hashFiles('test/CMakeLists.txt') }}
 
       - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: cmake -S test -B build/test -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build

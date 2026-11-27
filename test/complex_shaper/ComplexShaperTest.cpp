@@ -408,7 +408,9 @@ void expectShapesCorrectlyUnderPressure(ComplexShaper& shaper, const std::string
   const auto& later = kBengaliShaping[6];  // প্রকাশ: first shaped once memory is back
   std::string out;
   for (int call = 0; call < 3; call++) {
-    if (shaper.shape(word.utf8, out)) ASSERT_EQ(glyphIds(out), glyphIds(word)) << when << ", call " << call;
+    if (shaper.shape(word.utf8, out)) {
+      ASSERT_EQ(glyphIds(out), glyphIds(word)) << when << ", call " << call;
+    }
   }
   restoreMemory();
   for (const auto* entry : {&word, &later}) {

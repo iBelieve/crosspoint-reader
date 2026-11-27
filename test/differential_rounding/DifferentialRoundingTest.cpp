@@ -133,7 +133,7 @@ TEST(Fp4Math, RoundingBoundaries) {
 
 TEST(Fp4Math, TtfAdvancesDoNotRoundUpBeforePixelSnapping) {
   // SDK 26.6 advances for Caecilia LT i/l (16pt), x (13pt), & (14pt), K/X (16pt), taken directly from the TTF
-  for (const auto [advance26_6, pixels] : {std::pair{670, 10}, {1054, 16}, {1438, 22}, {1502, 23}}) {
+  for (const auto& [advance26_6, pixels] : {std::pair{670, 10}, {1054, 16}, {1438, 22}, {1502, 23}}) {
     EXPECT_EQ(fp4::toPixel(fp4::truncate26_6_to_4(advance26_6)), pixels);
     EXPECT_EQ(fp4::toPixel((advance26_6 + 2) >> 2), pixels + 1);
   }

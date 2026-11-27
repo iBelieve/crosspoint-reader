@@ -279,7 +279,7 @@ bool BookMetadataCache::buildBookBin(const std::string& epubPath, const BookMeta
 
       std::deque<ZipFile::SizeTarget> targets;
       spineSizes.emplace(spineCount, 0);
-      int matched = 0;
+      [[maybe_unused]] int matched = 0;  // logged only
 
       spineIn.seek(0);
       for (int i = 0; i < spineCount; i++) {

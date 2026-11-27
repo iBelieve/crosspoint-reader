@@ -15,3 +15,4 @@ target_include_directories(LibraryBuilderTest PRIVATE
 )
 target_link_libraries(LibraryBuilderTest PRIVATE crosspoint_test_common GTest::gtest_main)
 gtest_discover_tests(LibraryBuilderTest)
+crosspoint_allow_sort_array_bounds()

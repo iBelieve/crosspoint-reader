@@ -18,3 +18,5 @@ target_link_libraries(InflateReaderTest PRIVATE
 )
 
 gtest_discover_tests(InflateReaderTest)
+# Vendored code: not ours to make warning-clean.
+set_source_files_properties(${REPO_ROOT}/lib/uzlib/src/tinflate.c PROPERTIES COMPILE_OPTIONS -w)
