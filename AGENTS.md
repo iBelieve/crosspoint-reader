@@ -61,7 +61,8 @@ policies on PRs, scope, and agent autonomy do not apply; the technical rules in
 Agents may work end to end: create a branch, implement, run the checks, commit,
 push the branch, and open a PR against `develop`. Write the PR description
 yourself, using [the PR template](.github/PULL_REQUEST_TEMPLATE.md). Follow the
-[git rules](.agents/rules/git-workflow.md).
+[git rules](.agents/rules/git-workflow.md). Review subagents are the exception:
+they only inspect, and never write files, run builds, commit, push, or publish.
 
 The owner keeps these decisions:
 
@@ -133,5 +134,6 @@ before marking the PR ready (a draft PR may be open earlier). It covers the
 checks above, one independent review pass, the `xhigh` code review, and the
 PR's test plan.
 
-Documentation, pure tests, and host-only scripts need the relevant checks and a
-self-review against the same checklists, not the full handoff.
+Documentation, pure tests, and host-only scripts need the relevant checks, a
+self-review against the same checklists, and the `xhigh` code review, not the
+full handoff, unless they change firmware output or its build.

@@ -73,17 +73,18 @@ diff.
 
 ## 5. Code review at xhigh
 
-Run the `xhigh` code review from the
+Commit all fixes and push, then run the `xhigh` code review from the
 [verification rules](../../../AGENTS.md#verification-is-not-optional) on the
-current head. Fix real findings and rerun affected checks. If the fixes are
-substantive, run it again on the new head.
+pushed PR head (open a draft PR first if none exists). Fix real findings,
+commit, push, and run it again on the new head. After two `xhigh` rounds that
+still find real issues, leave the PR in draft and report to the owner.
 
-**Done when:** an `xhigh` review has run on the final head with no unaddressed
-real finding.
+**Done when:** an `xhigh` review has run on the pushed final head with no
+unaddressed real finding. Make no further commits before step 6.
 
 ## 6. Mark the PR ready
 
-Commit, push, and open the PR or mark it ready following the
+Mark the PR ready following the
 [git rules](../../rules/git-workflow.md). In the PR description, give:
 
 - old and new behavior, and who owns any new state or memory;

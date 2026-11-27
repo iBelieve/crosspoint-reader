@@ -8,7 +8,9 @@
 Checks run, with results. Name any check that could not run and why.
 
 - [ ] `./bin/clang-format-fix` (new files added to git first)
-- [ ] Host tests (`ctest`)
+- [ ] Host tests (`ctest`, plus the Python and Node tests in CI)
+- [ ] Any other job in `.github/workflows/ci.yml`
+- [ ] `xhigh` code review on the final head
 - [ ] `pio check`
 - [ ] `pio run -e <env>` for affected boards
 - [ ] New or changed logic has host tests

@@ -21,7 +21,7 @@ CrossPoint thrives because people step up to build what they want to see.
   [Issue](https://github.com/crosspoint-reader/crosspoint-reader/issues).
 - While we encourage experimentation, the maintainers reserve the right to guide the project’s technical direction to
   ensure stability on the ESP32-C3’s constrained hardware.
-- For more guidance on the scope of the project, see the [SCOPE.md](SCOPE.md) document.
+- For more guidance on the scope of the project, see the [upstream SCOPE.md](https://github.com/crosspoint-reader/crosspoint-reader/blob/develop/SCOPE.md) document.
 
 ### 3. Transparent Communication
 To keep the project healthy, we keep our "work" in the open.

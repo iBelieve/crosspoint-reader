@@ -50,7 +50,7 @@ commit; a pure refactor preserves behavior and goes in its own commit.
   ready only after the
   [verification checks](../../AGENTS.md#verification-is-not-optional) pass and,
   for firmware changes, [firmware-handoff](../skills/firmware-handoff/SKILL.md)
-  steps 1-4 are done.
+  steps 1-5 are done.
 - Fill in the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md): what
   changed and why, checks run with results, checks that could not run and why,
   memory/flash impact, and the device test plan.
@@ -74,12 +74,14 @@ below are from the repository root.
   facts worth porting, but do not take its policy.
 - **Fork sections in shared files:** in `AGENTS.md`, keep the fork's "This
   fork", "How agents work here", "Verification is not optional", and "Firmware
-  handoff" sections and the "Start here" wording about verifying for the owner.
+  handoff" sections, the routing-table row for "New features, apps, ...", and
+  the "Start here" wording ("tie it to the requirement", verifying for the
+  owner).
   Upstream's "Human ownership" and "Mandatory firmware handoff" sections stay
   deleted. The same applies to the fork edits in `.agents/README.md`,
   `.agents/rules/testing-debugging.md`, `.agents/rules/ui-activities.md`,
   `README.md` (scope links), and `ROADMAP.md` (note and
-  upstream links). Take upstream's other changes in these files.
+  upstream links), and `GOVERNANCE.md` (upstream scope link). Take upstream's other changes in these files.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
   upstream's version.
 
