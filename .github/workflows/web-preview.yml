@@ -1,0 +1,139 @@
+name: Web preview
+
+# Builds the simulator for the browser, tests it in headless Chromium, and
+# deploys it to Cloudflare Pages: pr-<number>.crosspoint-sim.pages.dev for a
+# pull request, develop.crosspoint-sim.pages.dev for develop. The deploy steps
+# are skipped until the CLOUDFLARE_API_TOKEN secret (Cloudflare Pages: Edit)
+# and the CLOUDFLARE_ACCOUNT_ID variable are set.
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EMSDK_VERSION: '7.0.1'
+  PAGES_PROJECT: crosspoint-sim
+
+jobs:
+  preview:
+    name: Browser simulator preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      CAN_DEPLOY: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && vars.CLOUDFLARE_ACCOUNT_ID != '' }}
+      PAGES_BRANCH: ${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'develop' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Install PlatformIO Core
+        # Same core as ci.yml; the i18n and HTML generators need pyyaml.
+        run: |
+          uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
+          uv pip install --system -U "pyyaml>=6.0.2"
+
+      - name: Install Emscripten
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+
+      - name: Build browser simulator
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          pio run -e simulator_web
+
+      - name: Assemble site
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          short="${HEAD_SHA:0:7}"
+          if [ -n "$PR_NUMBER" ]; then label="PR #$PR_NUMBER · $short"; else label="develop · $short"; fi
+          python3 test/simulator/web_site.py .pio/build/simulator_web sim-site \
+            --label "$label" --url "$PR_URL"
+          echo "WASM_MB=$(python3 -c 'import os; print(round(os.path.getsize("sim-site/program.wasm") / 1e6, 1))')" >> "$GITHUB_ENV"
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Run browser smoke test
+        run: node test/simulator/web_smoke.mjs sim-site --out sim-web-artifacts
+
+      - name: Upload screenshots and console log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simulator-web-smoke
+          path: sim-web-artifacts
+          if-no-files-found: ignore
+
+      - name: Deploy to Cloudflare Pages
+        if: env.CAN_DEPLOY == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          wrangler="npx --yes wrangler@4"
+          if ! $wrangler pages project list | grep -qw "$PAGES_PROJECT"; then
+            $wrangler pages project create "$PAGES_PROJECT" --production-branch=develop
+          fi
+          $wrangler pages deploy sim-site --project-name="$PAGES_PROJECT" \
+            --branch="$PAGES_BRANCH" --commit-hash="$HEAD_SHA" --commit-dirty=true
+          echo "PREVIEW_URL=https://$PAGES_BRANCH.$PAGES_PROJECT.pages.dev" >> "$GITHUB_ENV"
+
+      - name: Comment preview link
+        if: env.PREVIEW_URL != '' && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = '<!-- web-preview -->';
+            const body = [
+              marker,
+              `**Browser simulator preview:** ${process.env.PREVIEW_URL}`,
+              '',
+              `Built from ${process.env.HEAD_SHA.slice(0, 7)}; program.wasm is ${process.env.WASM_MB} MB. ` +
+                'Keys: Esc back, Enter confirm, arrows, P power. The SD card is kept in your browser; ' +
+                'use "Reset SD card" on the page for a fresh one. The web server, Wi-Fi and HTTP features do not work in the browser.',
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
