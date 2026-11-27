@@ -13,10 +13,11 @@ function fixture() {
   const pullRequest = {number: 10, state: 'open', head: {sha}, base: {ref: 'develop'}};
   const records = {20: [{name: 'firmware-stats-default', id: 20}], 10: [{name: 'firmware-stats-default', id: 10}]};
   const payloads = {20: zip({environment: 'default', sha, ram: 90, flash: 130, image: 200, base_sha: baseline}), 10: zip({environment: 'default', sha: baseline, ram: 100, flash: 120, image: 150})};
+  let jobs = [{name: 'Build default', conclusion: 'success'}, {name: 'Build x4c', conclusion: 'success'}];
   let runs = [{id: 10, head_sha: baseline, event: 'push', head_branch: 'develop', html_url: 'https://example.test/run/10'}];
   const posted = [];
   const actions = {
-    listWorkflowRuns: 'runs', listWorkflowRunArtifacts: 'artifacts',
+    listWorkflowRuns: 'runs', listWorkflowRunArtifacts: 'artifacts', listJobsForWorkflowRun: 'jobs',
     downloadArtifact: async ({artifact_id}) => ({data: payloads[artifact_id]}),
   };
   const github = {
@@ -29,12 +30,13 @@ function fixture() {
       if (method === 'artifacts') return records[args.run_id] || [];
       if (method === 'pulls') return [pullRequest];
       if (method === 'comments') return [];
+      if (method === 'jobs') return jobs;
       if (method === 'runs') return args.event === 'push' ? runs : [run];
       throw new Error(method);
     },
   };
   return {payloads, github, context: {repo: {owner: 'upstream', repo: 'reader'}, payload: {workflow_run: run}}, core: {notice() {}, warning() {}}, run, pullRequest, builds, records, posted,
-    setRuns(value) {runs = value;}};
+    setRuns(value) {runs = value;}, setJobs(value) {jobs = value;}};
 }
 
 test('exact byte deltas and unavailable values', () => {
@@ -138,5 +140,19 @@ test('queued publishers in completion order 19, 21, 20 retain the latest comment
       ? [{...f.run, id: 21}] : paginate(method, args);
     await publish(f);
     assert.equal(f.posted.length, id === 21 ? 1 : 0);
+  }
+});
+
+test('lists only boards this run built, falling back to all boards', async () => {
+  const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
+  await publish(f);
+  assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+  assert.doesNotMatch(f.posted[0].body, /Sticky/);
+  for (const jobs of [[], new Error('denied')]) {
+    const g = fixture(); g.records[20].push({name: 'firmware.bin', id: 30});
+    if (Array.isArray(jobs)) g.setJobs(jobs);
+    else { const paginate = g.github.paginate; g.github.paginate = async (m, a) => { if (m === 'jobs') throw jobs; return paginate(m, a); }; }
+    await publish(g);
+    assert.match(g.posted[0].body, /Firmware unavailable: Sticky, X4 Pro, X4 Classic,/);
   }
 });

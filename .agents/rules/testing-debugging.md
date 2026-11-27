@@ -74,6 +74,11 @@ coverage. Preserve pinned core/packages and patches. Release/RC board-specific
 asset naming must agree with OTA discovery. Fix CI failures on your PR before
 calling it ready.
 
+CI builds only `default` (X3/X4) and `x4c` (X4 Classic) by default. To build
+every board, add the `all-boards` label to the PR, or run "CI (build)" by hand
+with `all_boards` checked. Do this for changes to shared board code, HAL, SDK
+pin, or `platformio.ini`, and for work meant for upstream.
+
 ### Serial Monitor Options
 
 Use `python3 scripts/debugging_monitor.py` for enhanced logs or

@@ -37,7 +37,7 @@ module.exports = async ({github, context, core}) => {
     return;
   }
 
-  const builds = [
+  const allBuilds = [
     { env: 'default', name: 'firmware.bin', device: 'X3 / X4' },
     { env: 'sticky', name: 'firmware-sticky.bin', device: 'Sticky' },
     { env: 'x4pro', name: 'firmware-x4pro.bin', device: 'X4 Pro' },
@@ -48,6 +48,18 @@ module.exports = async ({github, context, core}) => {
     { env: 'picco', name: 'firmware-picco.bin', device: 'BOOX Picco' },
     { env: 'onepage', name: 'firmware-onepage.bin', device: 'OnePage' },
   ];
+  // CI builds some boards only on request, so list only boards this run built.
+  let builds = allBuilds;
+  try {
+    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+      owner, repo, run_id: run.id, filter: 'latest', per_page: 100,
+    });
+    const built = new Set(jobs.filter(job => job.conclusion !== 'skipped').map(job => job.name));
+    const ran = allBuilds.filter(build => built.has(`Build ${build.env}`));
+    if (ran.length) builds = ran;
+  } catch (error) {
+    core.warning(`Could not list build jobs: ${error.message}`);
+  }
   const artifactResponse =
     await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
       owner,
