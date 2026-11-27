@@ -70,6 +70,11 @@ class CDP {
       if (data.error) reject(new Error(JSON.stringify(data.error)));
       else resolve(data.result);
     });
+    // A closed socket would otherwise leave calls pending forever.
+    socket.addEventListener('close', () => {
+      for (const {reject} of this.pending.values()) reject(new Error('CDP socket closed'));
+      this.pending.clear();
+    });
   }
   send(method, params = {}) {
     const id = ++this.id;
@@ -123,6 +128,8 @@ test('Tab after jumping to a later plugin begins inside its card', {
   const keep = chunk => { stderr = (stderr + chunk).slice(-4000); };
   child.stdout.on('data', keep);
   child.stderr.on('data', keep);
+  // On a test timeout the finally block may never run, so stop Chrome here too.
+  t.signal.addEventListener('abort', () => child.kill('SIGKILL'), {once: true});
   let cdp;
   try {
     let port;

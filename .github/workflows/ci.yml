@@ -232,6 +232,7 @@ jobs:
 
       - name: Test web UI plugin navigation
         if: matrix.cc == 'gcc-13'
+        timeout-minutes: 5
         # Ubuntu 24.04's AppArmor can block the user namespaces Chrome's sandbox needs.
         # The browser test uses the runner's preinstalled Chrome and skips without it.
         run: |
