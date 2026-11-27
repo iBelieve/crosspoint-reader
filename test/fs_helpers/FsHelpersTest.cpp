@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 #include "FsHelpers.h"
@@ -60,13 +61,21 @@ TEST(SanitizePathComponentForFat32, KeepsTitleThatFits) {
   EXPECT_EQ(sanitize("Эдем (полный перевод)"), "Эдем-(полный-перевод)");
 }
 
+// Same bytes as snprintf(title, sizeof(title), "%s", source) for a longer source.
+template <size_t N, size_t M>
+void copyTruncated(char (&title)[N], const char (&source)[M]) {
+  static_assert(M > N, "source must not fit");
+  std::memcpy(title, source, N - 1);
+  title[N - 1] = '\0';
+}
+
 // The readers copy the title into ScreenshotInfo::title (char[64]) with snprintf, which can
 // end the copy partway through a Cyrillic letter.
 TEST(SanitizePathComponentForFat32, DropsLetterCutOffByCaller) {
   char title[64];
-  snprintf(title, sizeof(title), "%s", kTitle2103);
+  copyTruncated(title, kTitle2103);
   EXPECT_EQ(sanitize(title), "Богиня-глюкозы.-Нормализуйте-уров");
-  snprintf(title, sizeof(title), "%s", kTitle2199);
+  copyTruncated(title, kTitle2199);
   EXPECT_EQ(sanitize(title), "Вглядываясь-в-солнце.-Жизнь-без-ст");
 }
 

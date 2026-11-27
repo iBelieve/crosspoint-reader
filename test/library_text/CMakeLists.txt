@@ -15,3 +15,4 @@ target_link_libraries(LibraryTextTest PRIVATE
 )
 
 gtest_discover_tests(LibraryTextTest)
+crosspoint_allow_sort_array_bounds()

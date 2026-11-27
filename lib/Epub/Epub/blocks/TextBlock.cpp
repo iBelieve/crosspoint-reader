@@ -614,7 +614,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
       LOG_ERR("TXB", "OOM: arena %u bytes", static_cast<uint32_t>(size));
       return nullptr;
     }
-    if (file.read(block->arena.get(), size) != size) {
+    if (file.read(block->arena.get(), size) != static_cast<int>(size)) {
       LOG_ERR("TXB", "Deserialization failed: arena read (%u bytes)", static_cast<uint32_t>(size));
       return nullptr;
     }
@@ -703,7 +703,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   if (hasWordFonts) {
     const size_t size = sizeof(int32_t) * MAX_WORD_FONTS + wc;
     block->wordFontData = makeUniqueNoThrow<uint8_t[]>(size);
-    if (!block->wordFontData || file.read(block->wordFontData.get(), size) != size) {
+    if (!block->wordFontData || file.read(block->wordFontData.get(), size) != static_cast<int>(size)) {
       LOG_ERR("TXB", "Deserialization failed: word fonts");
       return nullptr;
     }

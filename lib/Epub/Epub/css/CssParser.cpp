@@ -1281,7 +1281,7 @@ CssParser::ParseResult CssParser::loadFromStream(HalFile& source, const std::str
     return ParseResult::Error;
   }
 
-  size_t totalRead = 0;
+  [[maybe_unused]] size_t totalRead = 0;  // logged only
 
   // Use stack-allocated buffers for parsing to avoid heap reallocations
   StackBuffer selector;
@@ -2016,7 +2016,7 @@ CssParser::CacheLoadResult CssParser::loadFromCache() {
     return CacheLoadResult::Invalid;
   }
 
-  const bool partial = (flags & CSS_CACHE_FLAG_PARTIAL) != 0;
+  [[maybe_unused]] const bool partial = (flags & CSS_CACHE_FLAG_PARTIAL) != 0;
   LOG_DBG("CSS", "Loaded %u rules from %s cache", ruleCount, partial ? "partial" : "complete");
   return CacheLoadResult::Complete;
 }

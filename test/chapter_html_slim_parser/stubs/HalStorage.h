@@ -28,7 +28,7 @@ class HalFile {
   }
   int available() const { return file_ ? static_cast<int>(size() - position()) : 0; }
   int read() { return file_ ? std::fgetc(file_) : -1; }
-  size_t read(void* buffer, size_t count) { return file_ ? std::fread(buffer, 1, count, file_) : 0; }
+  int read(void* buffer, size_t count) { return file_ ? static_cast<int>(std::fread(buffer, 1, count, file_)) : 0; }
   size_t write(const void* buffer, size_t count) {
     if (HalFileTest::failNextWrite) {
       HalFileTest::failNextWrite = false;
