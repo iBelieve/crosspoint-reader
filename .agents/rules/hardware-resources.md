@@ -71,7 +71,8 @@ the cost over one that needs measuring:
   change of the kinds above. Find it and fix it in the SDK instead of
   accepting the growth here.
 
-CI posts a per-target size comparison on each pull request. If a feature still
+CI posts a size comparison for `x4c` on each pull request; measure other
+targets locally as described below. If a feature still
 adds code for targets or callers that do not use it, state the number in the PR
 description with the reason; "the feature needs it" is not one when a pointer,
 a shared function or a build flag would avoid it. To measure before pushing,

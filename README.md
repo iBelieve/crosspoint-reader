@@ -211,7 +211,7 @@ pio run --target upload
 
 ```bash
 ./bin/clang-format-fix
-pio check -e default
+pio check -e x4c
 pio run -e default
 ```
 

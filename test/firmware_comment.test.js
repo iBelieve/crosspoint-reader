@@ -14,7 +14,8 @@ function fixture() {
   const records = {20: [{name: 'firmware-stats-default', id: 20}], 10: [{name: 'firmware-stats-default', id: 10}]};
   const payloads = {20: zip({environment: 'default', sha, ram: 90, flash: 130, image: 200, base_sha: baseline}), 10: zip({environment: 'default', sha: baseline, ram: 100, flash: 120, image: 150})};
   let jobs = [{name: 'Build default', conclusion: 'success'}, {name: 'Build x4c', conclusion: 'failure'},
-    {name: 'Build sticky', conclusion: 'skipped'}];
+    {name: 'Build sticky', conclusion: 'skipped'}, {name: 'Build x4pro', conclusion: 'failure'}];
+  const warnings = [];
   let runs = [{id: 10, head_sha: baseline, event: 'push', head_branch: 'develop', html_url: 'https://example.test/run/10'}];
   const posted = [];
   const actions = {
@@ -39,7 +40,7 @@ function fixture() {
       throw new Error(method);
     },
   };
-  return {payloads, github, context: {repo: {owner: 'upstream', repo: 'reader'}, payload: {workflow_run: run}}, core: {notice() {}, warning() {}}, run, pullRequest, builds, records, posted,
+  return {payloads, github, context: {repo: {owner: 'upstream', repo: 'reader'}, payload: {workflow_run: run}}, core: {notice() {}, warning(message) {warnings.push(message);}}, warnings, run, pullRequest, builds, records, posted,
     setRuns(value) {runs = value;}, setJobs(value) {jobs = value;}};
 }
 
@@ -156,7 +157,9 @@ test('lists only boards this run built', async () => {
   assert.deepEqual([...script.matchAll(/\{ env: '([^']+)'/g)].map(m => m[1]).sort(), [...all].sort());
   const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
   await publish(f);
-  assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+  assert.deepEqual(f.warnings, []);
+  assert.match(f.posted[0].body, /X3 \/ X4 \(`firmware\.bin`\)/);
+  assert.match(f.posted[0].body, /Firmware unavailable: X4 Pro, X4 Classic\./);
   assert.doesNotMatch(f.posted[0].body, /Sticky/);
 });
 test('without a usable job list, lists x4c and boards that uploaded artifacts', async () => {

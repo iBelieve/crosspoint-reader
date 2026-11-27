@@ -9,7 +9,7 @@ If needed, see [Getting Started](./getting-started.md).
 
 ```sh
 ./bin/clang-format-fix
-pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
 pio run
 ```
 

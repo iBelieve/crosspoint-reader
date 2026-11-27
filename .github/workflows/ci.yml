@@ -5,14 +5,16 @@ on:
     branches: [develop]
   pull_request:
     # `labeled` lets the all-boards label start a run without a new push.
-    # Adding any label, even on a closed PR, starts a full run.
+    # Adding any label, even on a closed PR, starts a full run. Removing a
+    # label starts none, and re-runs reuse the original labels.
     types: [opened, synchronize, reopened, labeled]
 
-# A new push to a PR cancels its run in progress. Other PR events share the
-# head SHA, so they wait: a cancelled run fails Test Status on that SHA.
+# A new push to a PR cancels its run in progress. Other events and re-runs
+# queue behind it instead, since cancelling fails Test Status on that SHA. A
+# newer queued run replaces an older queued one.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' && github.run_attempt == 1 }}
 
 permissions:
   contents: read
@@ -74,8 +76,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-v3-${{ runner.os }}-x4c-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
-          restore-keys: pio-v3-${{ runner.os }}-x4c-
+          key: pio-v3-${{ runner.os }}-cppcheck-x4c-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
+          restore-keys: pio-v3-${{ runner.os }}-cppcheck-x4c-
 
       - name: Install cppcheck runtime dependency
         run: |
