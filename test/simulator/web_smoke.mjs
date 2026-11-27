@@ -72,6 +72,11 @@ try {
     await sleep(100);
     await page.keyboard.up(key);
   };
+  // A reloaded page must still own the saved SD card, or nothing it does is kept.
+  const expectSaving = async () => {
+    const notice = (await page.textContent('#notice')) || '';
+    if (notice.trim()) throw new Error(`SD card not being saved: ${notice}`);
+  };
   const shot = (name) => page.locator('canvas').screenshot({ path: join(out, `${name}.png`) });
   const step = async (key, re, name) => {
     const from = logs.length;
@@ -97,6 +102,7 @@ try {
   await waitLog(/SCREEN:.*Simulator Smoke/, from);
   await sleep(300);
   await shot('6-reloaded');
+  await expectSaving();
   // Home selects the recent book: Confirm resumes it where it was left.
   await step('Enter', new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), '7-resumed');
 
@@ -112,6 +118,7 @@ try {
   await waitLog(/Entering activity: (?!Boot|Sleep)/, from);
   await sleep(500);
   await shot('9-woken');
+  await expectSaving();
   if (page.url().includes('CROSSPOINT_SIM_WAKE_REASON')) {
     throw new Error(`wake reason left in the address bar: ${page.url()}`);
   }

@@ -18,6 +18,8 @@ import sys
 from sample_book import make_sample_epub
 
 BOOKS = ["books/sample.epub"]
+# Marks a folder this script made, so only such a folder is ever replaced.
+MARKER = ".crosspoint-sim-site"
 
 HEADERS = """/*
   Cross-Origin-Opener-Policy: same-origin
@@ -33,7 +35,7 @@ HEADERS = """/*
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("build", type=Path, help="build folder, e.g. .pio/build/simulator_web")
-    parser.add_argument("out", type=Path, help="site folder to create (replaced if it exists)")
+    parser.add_argument("out", type=Path, help="new site folder (one this script made is replaced)")
     parser.add_argument("--label", default="", help="text shown in the page header")
     parser.add_argument("--url", default="", help="link for the label, e.g. the PR")
     args = parser.parse_args()
@@ -43,9 +45,13 @@ def main():
     if missing:
         parser.error(f"missing in {args.build}: {', '.join(missing)} (build with: pio run -e simulator_web)")
 
-    if args.out.exists():
-        shutil.rmtree(args.out)
-    args.out.mkdir(parents=True)
+    out = args.out.resolve()
+    if out.exists() and any(out.iterdir()):
+        if not (out / MARKER).is_file():
+            parser.error(f"{args.out} is not empty and was not made by this script; pick a new folder")
+        shutil.rmtree(out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / MARKER).touch()
     for dest, src in sources.items():
         shutil.copyfile(args.build / src, args.out / dest)
 

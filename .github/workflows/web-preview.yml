@@ -108,6 +108,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          set -o pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT"
           status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api")
           if [ "$status" = 404 ]; then
