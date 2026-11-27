@@ -232,6 +232,50 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build/test --output-on-failure -j
 
+  simulator-smoke:
+    name: Simulator smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Install SDL2 and OpenSSL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libssl-dev
+
+      - name: Install PlatformIO Core
+        # Same core as the device builds; the i18n and HTML generators need pyyaml.
+        run: |
+          uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
+          uv pip install --system -U "pyyaml>=6.0.2"
+
+      - name: Build simulator
+        run: pio run -e simulator
+
+      - name: Run smoke test
+        run: python3 test/simulator/smoke.py .pio/build/simulator/program --out sim-artifacts
+
+      - name: Upload screenshots and log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simulator-smoke
+          path: sim-artifacts
+          if-no-files-found: ignore
+
   # This job is used as the PR required actions check, allows for changes to other steps in the future without breaking
   # PR requirements.
   test-status:
@@ -240,6 +284,7 @@ jobs:
       - build
       - clang-format
       - cppcheck
+      - simulator-smoke
       - unit-tests
     if: always()
     runs-on: ubuntu-latest

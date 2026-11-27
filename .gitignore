@@ -36,3 +36,6 @@ lib/EpdFont/scripts/output/
 sdkconfig.sticky
 sdkconfig.x4pro
 flake.*
+
+# Simulator smoke test output (test/simulator/smoke.py)
+/sim-artifacts/

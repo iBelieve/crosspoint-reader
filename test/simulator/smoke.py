@@ -21,8 +21,14 @@ import tempfile
 from sample_book import PAGE_ONE_WORD, PAGE_TWO_WORD, make_sample_epub
 
 BOOK = "smoke.epub"
+# Screenshots in script order; every one must be saved by this run.
+SHOTS = ("1-home", "2-files", "3-page1", "4-page2")
 # Generous upper bound for the whole run; each WAIT also has its own timeout.
 RUN_TIMEOUT_S = 180
+
+
+def shot(out, index):
+    return out / f"{SHOTS[index]}.bmp"
 
 
 def input_script(out):
@@ -31,17 +37,18 @@ def input_script(out):
     steps = [
         "0:WAIT:Entering activity: Home",
         "500:WAIT:SCREEN:.*Browse Files",
-        f"0:SHOT:{out / '1-home.bmp'}",
+        f"0:SHOT:{shot(out, 0)}",
         "300:ENTER",
+        "0:WAIT:Entering activity: FileBrowser",
         # The browser may list the file name or the book title.
         "0:WAIT:SCREEN:.*[Ss]moke",
-        f"0:SHOT:{out / '2-files.bmp'}",
+        f"0:SHOT:{shot(out, 1)}",
         "300:ENTER",
         f"0:WAIT:SCREEN:.*{PAGE_ONE_WORD}",
-        f"0:SHOT:{out / '3-page1.bmp'}",
+        f"0:SHOT:{shot(out, 2)}",
         "300:DOWN",
         f"0:WAIT:SCREEN:.*{PAGE_TWO_WORD}",
-        f"0:SHOT:{out / '4-page2.bmp'}",
+        f"0:SHOT:{shot(out, 3)}",
         "300:QUIT",
     ]
     script = ";".join(steps)
@@ -61,6 +68,10 @@ def main():
         parser.error(f"simulator binary not found: {args.program} (build with: pio run -e simulator)")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
+    # The simulator exits 0 even when a SHOT saves nothing, so stale files
+    # from an earlier run must not count.
+    for index in range(len(SHOTS)):
+        shot(out, index).unlink(missing_ok=True)
 
     env = {key: value for key, value in os.environ.items() if not key.startswith("CROSSPOINT_SIM_")}
     with tempfile.TemporaryDirectory(prefix="crosspoint-sim-smoke-") as temp:
@@ -90,7 +101,7 @@ def main():
                 status = None
 
     log_text = log_path.read_text(errors="replace")
-    missing = [name for name in ("1-home", "2-files", "3-page1", "4-page2") if not (out / f"{name}.bmp").is_file()]
+    missing = [SHOTS[i] for i in range(len(SHOTS)) if not shot(out, i).is_file()]
     if status == 0 and not missing:
         print(f"simulator smoke test passed; artifacts in {out}")
         return 0
