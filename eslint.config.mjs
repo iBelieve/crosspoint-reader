@@ -12,4 +12,8 @@ export default [
     files: ['**/*.js', '**/*.cjs'],
     languageOptions: {sourceType: 'commonjs', globals: globals.node},
   },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {sourceType: 'module', globals: globals.node},
+  },
 ];
