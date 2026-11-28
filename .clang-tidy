@@ -66,8 +66,6 @@ Checks: >
 #   libstdc++'s std::sort or on paths with impossible string contents.
 # - EnumCastOutOfRange: several enums are bit flags, so OR-ed values are valid.
 # - Padding: reports the 64-bit host layout, not the 32-bit firmware layout.
-# - make-unique: std::make_unique aborts on OOM under -fno-exceptions; firmware
-#   code uses makeUniqueNoThrow (lib/Memory) instead.
 # - redundant-casting: a cast that is redundant on the host can be needed on the
 #   device, where types such as millis()'s differ.
 # - easily-swappable-parameters, enum-size, const-correctness, include-cleaner,

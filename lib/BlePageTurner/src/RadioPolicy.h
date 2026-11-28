@@ -59,7 +59,7 @@ inline constexpr size_t kC61StackBytes = 37244 + 4096;  // measured, plus a marg
 inline constexpr size_t kC61MinimumLargest = 2 * 4096;
 inline constexpr Profile kC61Profile{kC61StackBytes, kC61StackBytes + kC61MinimumLargest, kC61MinimumLargest, 0};
 #if defined(FREEINK_BLE_PROFILE_C61)
-inline constexpr const Profile& activeProfile() { return kC61Profile; }
+constexpr const Profile& activeProfile() { return kC61Profile; }
 #elif defined(FREEINK_BLE_STACK_IN_PSRAM)
 constexpr const Profile& activeProfile() { return kS3Profile; }
 #else
