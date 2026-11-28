@@ -40,7 +40,8 @@ const server = createServer((req, res) => {
     const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     file = join(site, path.endsWith('/') ? path + 'index.html' : path);
     if (file.startsWith(site + sep) && existsSync(file) && statSync(file).isFile()) body = readFileSync(file);
-  } catch {
+  } catch (err) {
+    logs.push(`[server] ${req.url}: ${err.message}`);
     body = undefined;
   }
   if (body === undefined) {
@@ -94,6 +95,7 @@ try {
     await shot(name);
   };
 
+  let from = 0;
   await page.goto(url);
   await waitLog(/SCREEN:.*Browse Files/);
   await sleep(300);
@@ -101,11 +103,22 @@ try {
   await step('Enter', /SCREEN:.*books/, '2-files');
   await step('Enter', /SCREEN:.*sample/, '3-books');
   await step('Enter', new RegExp(`SCREEN:.*${PAGE_ONE_WORD}`), '4-page1');
-  await step('ArrowDown', new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), '5-page2');
+  // The on-screen keys: a right-click must not press a key (its context menu
+  // would swallow the release), and a click on ▼ turns the page.
+  const down = page.locator('button[data-code="ArrowDown"]');
+  from = logs.length;
+  await down.click({ button: 'right' });
+  await sleep(1000);
+  if (logs.slice(from).some((l) => l.includes(PAGE_TWO_WORD))) throw new Error('a right-click pressed an on-screen key');
+  from = logs.length;
+  await down.click({ delay: 100 });
+  await waitLog(new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), from);
+  await sleep(300);
+  await shot('5-page2');
 
   // The SD card is saved every second; give it time, then reload.
   await sleep(2500);
-  let from = logs.length;
+  from = logs.length;
   await page.reload();
   await waitLog(/SCREEN:.*Simulator Smoke/, from);
   await sleep(300);

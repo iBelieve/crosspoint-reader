@@ -151,7 +151,7 @@ jobs:
               '',
               `Built from ${process.env.HEAD_SHA.slice(0, 7)}; program.wasm is ${process.env.WASM_MB} MB. ` +
                 'Keys: Esc back, Enter confirm, arrows, P power. The SD card is kept in your browser; ' +
-                'use "Reset SD card" on the page for a fresh one, or if a page looks like an older build (old caches). The web server, Wi-Fi and HTTP features do not work in the browser.',
+                'use "Reset SD card" on the page for a fresh one. A book laid out as in an older push of this PR means a missing cache version bump. The web server, Wi-Fi and HTTP features do not work in the browser.',
             ].join('\n');
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
