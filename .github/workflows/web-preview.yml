@@ -11,7 +11,8 @@ on:
   push:
     branches: [develop]
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+  pull_request_target:
+    types: [closed]
 
 permissions:
   contents: read
@@ -22,14 +23,14 @@ concurrency:
 
 env:
   EMSDK_VERSION: '7.0.1'
-  # Worker Previews need 4.135.0 or later; pinned so the --json output is stable.
+  # Worker Previews need 4.135.0 or later; pinned so its output file format is stable.
   WRANGLER: wrangler@4.169.0
   WRANGLER_CONFIG: test/simulator/wrangler.jsonc
 
 jobs:
   preview:
     name: Browser simulator preview
-    if: github.event.action != 'closed'
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -115,20 +116,25 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          set -o pipefail
+          # Wrangler writes one JSON line per command here; its stdout mixes in
+          # upload progress.
+          export WRANGLER_OUTPUT_FILE_PATH="$RUNNER_TEMP/wrangler.ndjson"
           if [ -n "$PR_NUMBER" ]; then
-            out=$(npx --yes "$WRANGLER" preview --config "$WRANGLER_CONFIG" \
-              --name "pr-$PR_NUMBER" --message "${HEAD_SHA:0:7}" --json)
-            printf '%s\n' "$out"
-            url=$(printf '%s' "$out" | jq -er '.preview.urls[0]')
+            cmd=(preview --name "pr-$PR_NUMBER")
+            query='select(.type == "preview") | .preview_urls[0]'
           else
-            npx --yes "$WRANGLER" deploy --config "$WRANGLER_CONFIG" --message "${HEAD_SHA:0:7}" | tee deploy.log
-            url=$(grep -oE 'https://[^ ]+\.workers\.dev' deploy.log | tail -1 || true)
+            cmd=(deploy)
+            query='select(.type == "deploy") | .targets[0]'
           fi
+          # One retry: two first runs can race to create the Worker.
+          npx --yes "$WRANGLER" "${cmd[@]}" --config "$WRANGLER_CONFIG" --message "${HEAD_SHA:0:7}" \
+            || { sleep 10; npx --yes "$WRANGLER" "${cmd[@]}" --config "$WRANGLER_CONFIG" --message "${HEAD_SHA:0:7}"; }
+          url=$(jq -r "$query // empty" "$WRANGLER_OUTPUT_FILE_PATH" | tail -1)
           if [ -z "$url" ]; then
             echo "::error::could not find the preview URL in wrangler's output"
             exit 1
           fi
+          case "$url" in https://*) ;; *) url="https://$url" ;; esac
           echo "PREVIEW_URL=$url" >> "$GITHUB_ENV"
 
       - name: Comment preview link
@@ -159,14 +165,19 @@ jobs:
 
   cleanup:
     name: Delete browser simulator preview
-    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    # pull_request_target: GitHub runs no pull_request workflow when a PR with
+    # a merge conflict closes. This job runs no code from the PR.
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions: {}
     env:
       CAN_DEPLOY: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && vars.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         if: env.CAN_DEPLOY == 'true'
+        with:
+          node-version: '22'
 
       - name: Delete the PR's Worker Preview
         if: env.CAN_DEPLOY == 'true'
@@ -174,8 +185,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        # A PR closed before its first deploy has no Preview to delete.
         run: |
-          npx --yes "$WRANGLER" preview delete --config "$WRANGLER_CONFIG" \
-            --name "pr-$PR_NUMBER" --skip-confirmation \
-            || echo "::warning::no Preview pr-$PR_NUMBER to delete, or the delete failed"
+          set -o pipefail
+          if npx --yes "$WRANGLER" preview delete --worker-name crosspoint-sim \
+              --name "pr-$PR_NUMBER" --skip-confirmation 2>&1 | tee delete.log; then
+            exit 0
+          fi
+          # A PR closed before its first deploy has no Preview; anything else fails.
+          if grep -qiE 'not found|does not exist|10025' delete.log; then
+            echo "No Preview pr-$PR_NUMBER to delete."
+            exit 0
+          fi
+          exit 1
