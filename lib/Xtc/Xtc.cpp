@@ -335,7 +335,8 @@ bool Xtc::generateThumbBmp(int height) const {
             copyOk =
                 bytesRead > 0 && dst.write(buffer, static_cast<size_t>(bytesRead)) == static_cast<size_t>(bytesRead);
           }
-          dst.close();
+          // close() writes the last sector, so it can fail too.
+          copyOk = dst.close() && copyOk;
           // A partial thumbnail would be reused on every later call.
           if (!copyOk) Storage.remove(thumbPath.c_str());
         }
