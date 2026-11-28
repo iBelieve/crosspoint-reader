@@ -191,8 +191,11 @@ test('a board missing from the develop build is not reported as a failed build',
 });
 
 test('cancelled runs neither publish nor supersede a finished run', async () => {
-  const cancelled = fixture(); cancelled.run.conclusion = 'cancelled';
+  const cancelled = fixture(); cancelled.run.conclusion = 'cancelled'; cancelled.records[20] = [];
   await publish(cancelled); assert.equal(cancelled.posted.length, 0);
+  const partial = fixture(); partial.run.conclusion = 'cancelled';
+  await publish(partial); assert.equal(partial.posted.length, 1);
+  assert.match(partial.posted[0].body, /CI finished with cancelled/);
   const f = fixture(); const paginate = f.github.paginate;
   f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
     ? [{...f.run, id: 21, conclusion: 'cancelled'}] : paginate(method, args);

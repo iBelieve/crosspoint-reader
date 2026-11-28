@@ -4,12 +4,6 @@ module.exports = async ({github, context, core}) => {
   const run = context.payload.workflow_run;
   const { owner, repo } = context.repo;
 
-  // A run cancelled by a newer push or a queued replacement has nothing to show.
-  if (run.conclusion === 'cancelled') {
-    core.notice(`Skipping cancelled run ${run.id}.`);
-    return;
-  }
-
   const headOwner = run.head_repository?.owner?.login;
   if (!headOwner) {
     core.notice(`No head repository found for ${run.head_sha}.`);
@@ -81,6 +75,11 @@ module.exports = async ({github, context, core}) => {
   // x4c builds on every run. Without the job list, add boards that uploaded anything.
   const builds = allBuilds.filter(build => build.env === 'x4c' || (built ? built.has(`Build ${build.env}`)
     : artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`)));
+  // A queued run cancelled before it started has nothing to show.
+  if (run.conclusion === 'cancelled' && !artifacts.size) {
+    core.notice(`Skipping cancelled run ${run.id} with no artifacts.`);
+    return;
+  }
   const missingBuilds = builds.filter((build) => !artifacts.has(build.name));
   const shortSha = run.head_sha.slice(0, 7);
   let body = `${marker}\n### Firmware builds\n\n`;
