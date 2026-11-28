@@ -244,7 +244,7 @@ bool ClippingStore::removeClippingAt(const size_t index) {
     }
     journal.flush();
   }
-  Clipping clipping = std::move(clippingRef(index));
+  Clipping clipping = clippingRef(index);
   for (size_t i = index; i + 1 < clippingSize; ++i) clippingRef(i) = clippingRef(i + 1);
   --clippingSize;
   dirty = true;

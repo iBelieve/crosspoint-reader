@@ -176,6 +176,7 @@ uint16_t measureWordWidth(const GfxRenderer& renderer, const int fontId, const s
   }
   const bool hasSoftHyphen = containsSoftHyphen(word);
   if (!hasSoftHyphen && !appendHyphen && word.data()[word.size()] == '\0') {
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage): the condition checks the terminator.
     return renderer.getTextAdvanceX(fontId, word.data(), style, characterSpacing);
   }
 
@@ -485,7 +486,7 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
         static_cast<uint8_t>(sizeSlot | ((style & EpdFontFamily::SMALL_CAPS) ? TextBlock::SMALL_CAPS_SLOT_FLAG : 0)));
     pushVisibleOffset(tokenOffset);
     if (padRuby && !rubyTexts.empty()) {
-      rubyTexts.push_back("");
+      rubyTexts.emplace_back("");
     }
   };
 
@@ -1009,7 +1010,7 @@ std::vector<uint16_t> ParsedText::calculateWordWidths(const GfxRenderer& rendere
     std::vector<RubyGroupInfo> groups;
     for (size_t i = 0; i < words.size(); ++i) {
       if (i < rubyTexts.size() && !rubyTexts[i].empty() && (wordStyles[i] & EpdFontFamily::RUBY_CONTINUE) == 0) {
-        RubyGroupInfo g;
+        RubyGroupInfo g{};
         g.start = i;
         g.baseWidth = wordWidths[i];
         g.count = 1;

@@ -22,7 +22,7 @@ struct TestCase {
   std::string word;
   std::string hyphenated;
   std::vector<size_t> expectedPositions;
-  int frequency;
+  int frequency = 0;
 };
 
 struct EvaluationResult {

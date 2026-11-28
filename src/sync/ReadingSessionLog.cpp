@@ -36,8 +36,8 @@ constexpr uint32_t MAX_SECONDS = 7 * 86400;
 constexpr int64_t MAX_FUTURE_SECONDS = 300;
 
 int utcOffsetMinutes(const time_t at) {
-  struct tm local;
-  struct tm utc;
+  struct tm local{};
+  struct tm utc{};
   localtime_r(&at, &local);
   gmtime_r(&at, &utc);
   // Reading the UTC fields as local time shifts the result by exactly the zone offset.
@@ -191,7 +191,7 @@ bool readingSessionLog::upload(SyncRequest& sync) {
                          "%s{\"session_id\":\"%s\",\"document\":\"%s\",\"started_at\":%lld,\"ended_at\":%lld,"
                          "\"seconds\":%lu,\"utc_offset_minutes\":%d}",
                          count ? "," : "", sessionId, document, static_cast<long long>(start),
-                         static_cast<long long>(start + seconds), static_cast<unsigned long>(seconds),
+                         static_cast<long long>(start) + seconds, static_cast<unsigned long>(seconds),
                          std::clamp(entry["tz"] | 0, -720, 840));
       starts[count++] = start;
     }

@@ -61,9 +61,9 @@ inline constexpr Profile kC61Profile{kC61StackBytes, kC61StackBytes + kC61Minimu
 #if defined(FREEINK_BLE_PROFILE_C61)
 inline constexpr const Profile& activeProfile() { return kC61Profile; }
 #elif defined(FREEINK_BLE_STACK_IN_PSRAM)
-inline constexpr const Profile& activeProfile() { return kS3Profile; }
+constexpr const Profile& activeProfile() { return kS3Profile; }
 #else
-inline constexpr const Profile& activeProfile() { return kX3Profile; }
+constexpr const Profile& activeProfile() { return kX3Profile; }
 #endif
 
 constexpr bool radioRearmWanted(bool idleStopped, bool entered, bool requested, bool buildPainted) {
@@ -79,17 +79,17 @@ enum class Phase : uint8_t {
 };
 
 struct RadioInputs {
-  Phase phase;
-  bool enabled;
-  Where where;
-  bool pageShown;
-  bool bookIndexing;
-  bool storageBusy;
-  bool heldForBuild;  // beforeChapterBuild() stopped it and afterPaint() has not come yet
-  bool idleStopped;   // stopped for idleness and not asked again since
-  bool linked;        // a remote is connected
-  uint32_t idleMs;    // since a remote was last connected (or the radio came up)
-  Heap heap;
+  Phase phase{};
+  bool enabled = false;
+  Where where{};
+  bool pageShown = false;
+  bool bookIndexing = false;
+  bool storageBusy = false;
+  bool heldForBuild = false;  // beforeChapterBuild() stopped it and afterPaint() has not come yet
+  bool idleStopped = false;   // stopped for idleness and not asked again since
+  bool linked = false;        // a remote is connected
+  uint32_t idleMs = 0;        // since a remote was last connected (or the radio came up)
+  Heap heap{};
   bool connectionBusy = false;
   bool hasBond = false;  // a remote has been chosen (Config::peerAddr): a book or Home starts the radio only for one
 };

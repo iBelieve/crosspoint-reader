@@ -42,10 +42,14 @@ Table selectScript(const Table& layout, const uint32_t* tags, uint32_t* chosen) 
   unsigned index = NOT_FOUND;
   *chosen = 0;
   for (unsigned i = 0; i < 3 && index == NOT_FOUND; i++) {
-    if (tags[i] && (index = findRecord(scripts, tags[i])) != NOT_FOUND) *chosen = tags[i];
+    if (!tags[i]) continue;
+    index = findRecord(scripts, tags[i]);
+    if (index != NOT_FOUND) *chosen = tags[i];
   }
   for (const uint32_t fallback : {tag("DFLT"), tag("dflt"), tag("latn")}) {
-    if (index == NOT_FOUND && (index = findRecord(scripts, fallback)) != NOT_FOUND) *chosen = fallback;
+    if (index != NOT_FOUND) break;
+    index = findRecord(scripts, fallback);
+    if (index != NOT_FOUND) *chosen = fallback;
   }
   if (index == NOT_FOUND || index >= scripts.u16(0)) return Table();
   return scripts.offset16(2 + 6 * index + 4);
@@ -58,9 +62,13 @@ Table selectLangSys(const Table& script, const uint32_t* languageTags, uint32_t*
   unsigned index = NOT_FOUND;
   *key = 0;
   for (unsigned i = 0; i < 3 && languageTags && languageTags[i] && index == NOT_FOUND; i++) {
-    if ((index = findRecord(records, languageTags[i])) != NOT_FOUND) *key = languageTags[i];
+    index = findRecord(records, languageTags[i]);
+    if (index != NOT_FOUND) *key = languageTags[i];
   }
-  if (index == NOT_FOUND && (index = findRecord(records, tag("dflt"))) != NOT_FOUND) *key = tag("dflt");
+  if (index == NOT_FOUND) {
+    index = findRecord(records, tag("dflt"));
+    if (index != NOT_FOUND) *key = tag("dflt");
+  }
   if (index == NOT_FOUND) return script.offset16(0);
   if (index >= script.u16(2)) return Table();
   return script.offset16(4 + 6 * index + 4);

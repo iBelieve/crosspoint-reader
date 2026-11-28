@@ -11,6 +11,7 @@ class ReleaseJsonParser {
 
   ReleaseJsonParser(const ReleaseJsonParser&) = delete;
   ReleaseJsonParser& operator=(const ReleaseJsonParser&) = delete;
+  ~ReleaseJsonParser() = default;
 
   void reset();
   void feed(const char* data, size_t len);
@@ -54,20 +55,20 @@ class ReleaseJsonParser {
 
   StreamingJsonParser parser;
 
-  Position position;
-  LastKey lastKey;
-  uint8_t depth;
-  uint8_t assetDepth;
+  Position position{};
+  LastKey lastKey{};
+  uint8_t depth = 0;
+  uint8_t assetDepth = 0;
 
   char tagName[32];
   char firmwareUrl[512];
-  size_t firmwareSize;
-  bool tagFound;
-  bool firmwareFound;
+  size_t firmwareSize = 0;
+  bool tagFound = false;
+  bool firmwareFound = false;
 
   char currentAssetName[48];
   char currentAssetUrl[512];
-  size_t currentAssetSize;
+  size_t currentAssetSize = 0;
 
   char firmwareAssetName[48];
 };

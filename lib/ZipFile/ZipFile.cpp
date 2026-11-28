@@ -297,12 +297,7 @@ bool ZipFile::loadZipDetails() {
   return true;
 }
 
-bool ZipFile::open() {
-  if (!Storage.openFileForRead("ZIP", filePath, file)) {
-    return false;
-  }
-  return true;
-}
+bool ZipFile::open() { return Storage.openFileForRead("ZIP", filePath, file); }
 
 bool ZipFile::close() {
   if (file) {

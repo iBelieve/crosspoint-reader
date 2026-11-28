@@ -20,9 +20,9 @@ RadioInputs reading(const Phase phase) {
 }
 
 struct Row {
-  const char* name;
+  const char* name = nullptr;
   RadioInputs in;
-  Why want;
+  Why want{};
 };
 
 template <typename F>

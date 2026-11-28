@@ -22,8 +22,8 @@ class ButtonPressNavigationTest : public ::testing::Test {
 
   // The shared list call order, with the production navigator.
   void navigate() {
-    navigator.onNextPress([this] { selected = ButtonNavigator::nextIndex(selected, 10); });
-    navigator.onPreviousPress([this] { selected = ButtonNavigator::previousIndex(selected, 10); });
+    ButtonNavigator::onNextPress([this] { selected = ButtonNavigator::nextIndex(selected, 10); });
+    ButtonNavigator::onPreviousPress([this] { selected = ButtonNavigator::previousIndex(selected, 10); });
     navigator.onNextContinuous([this] { ++pages; });
     navigator.onPreviousContinuous([this] { --pages; });
   }

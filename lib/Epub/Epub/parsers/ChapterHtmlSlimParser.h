@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Epub/FootnoteEntry.h"
@@ -235,7 +236,7 @@ class ChapterHtmlSlimParser {
   bool insideFootnoteLink = false;
   int footnoteLinkDepth = -1;
   uint8_t currentFootnoteLinkId = 0;
-  FootnoteEntry currentFootnote = {};
+  FootnoteEntry currentFootnote;
   int currentFootnoteLinkTextLen = 0;
   std::vector<std::pair<int, FootnoteEntry>> pendingFootnotes;  // <wordIndex, entry>
   int wordsExtractedInBlock = 0;
@@ -315,7 +316,7 @@ class ChapterHtmlSlimParser {
       const uint8_t imageRendering = 0, std::vector<std::string> tocAnchors = {},
       const std::function<void()>& popupFn = nullptr, const CssParser* cssParser = nullptr)
 
-      : epub(epub),
+      : epub(std::move(epub)),
         filepath(filepath),
         renderer(renderer),
         completePageFn(completePageFn),
