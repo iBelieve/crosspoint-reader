@@ -95,8 +95,9 @@ with a one-line reason, and list those hand edits in the PR. Paths below are fro
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
 - **Fork jobs in `.github/workflows/ci.yml`:** keep the `ruff` and `eslint`
-  jobs and their entries under the Test Status job's `needs:`. Take upstream's
-  other changes to the workflow.
+  jobs and their entries under the Test Status job's `needs:`, and the fork
+  edits listed above (x4c-only build matrix, `all-boards` label, concurrency,
+  x4c cppcheck). Take upstream's other changes to the workflow.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
   upstream's version, but adapt or drop any upstream policy wording in it
   (human approval for commits, no agent PRs, interactive apps out of scope).
