@@ -196,6 +196,10 @@ test('cancelled runs neither publish nor supersede a finished run', async () => 
   const partial = fixture(); partial.run.conclusion = 'cancelled';
   await publish(partial); assert.equal(partial.posted.length, 1);
   assert.match(partial.posted[0].body, /CI finished with cancelled/);
+  const older = fixture(); older.run.conclusion = 'cancelled'; const paginateO = older.github.paginate;
+  older.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+    ? [{...older.run}, {...older.run, id: 19, conclusion: 'success'}] : paginateO(method, args);
+  await publish(older); assert.equal(older.posted.length, 0);
   const f = fixture(); const paginate = f.github.paginate;
   f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
     ? [{...f.run, id: 21, conclusion: 'cancelled'}] : paginate(method, args);
