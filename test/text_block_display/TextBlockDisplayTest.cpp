@@ -1,4 +1,5 @@
 #include <GfxRenderer.h>
+#include <Serialization.h>
 #include <gtest/gtest.h>
 
 #include <cstdio>
@@ -160,3 +161,71 @@ TEST_P(TextBlockDisplayLayout, RoundTripsDisplayFormsWithOptionalFocusArrays) {
 
 INSTANTIATE_TEST_SUITE_P(WordCounts, TextBlockDisplayLayout,
                          testing::Combine(testing::Values<uint16_t>(1, 2, 3, 4), testing::Bool()));
+
+namespace {
+
+// Serializes a two-word line whose second word has ruby text, then lets `damage` edit the bytes.
+std::unique_ptr<TextBlock> loadDamagedRuby(void (*damage)(std::string& bytes, size_t rubyLengthAt)) {
+  TextBlock block({"kan", "ji"}, {0, 30}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(),
+                  {"", "rubytext"});
+  const ScopedTempDir tempDir;
+  const auto path = tempDir.path() / "ruby.bin";
+  {
+    HalFile out;
+    EXPECT_TRUE(out.open(path.c_str(), "wb"));
+    EXPECT_TRUE(block.serialize(out));
+  }
+  std::string bytes;
+  {
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) {
+      ADD_FAILURE() << "cannot reopen " << path;
+      return nullptr;
+    }
+    char buf[4096];
+    for (size_t n; (n = std::fread(buf, 1, sizeof(buf), f)) > 0;) bytes.append(buf, n);
+    std::fclose(f);
+  }
+  const size_t ruby = bytes.find("rubytext");
+  if (ruby == std::string::npos) {
+    ADD_FAILURE() << "ruby text not found in the serialized block";
+    return nullptr;
+  }
+  damage(bytes, ruby - sizeof(uint32_t));
+  {
+    std::FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) {
+      ADD_FAILURE() << "cannot rewrite " << path;
+      return nullptr;
+    }
+    std::fwrite(bytes.data(), 1, bytes.size(), f);
+    std::fclose(f);
+  }
+  HalFile in;
+  EXPECT_TRUE(in.open(path.c_str(), "rb"));
+  return TextBlock::deserialize(in);
+}
+
+}  // namespace
+
+TEST(TextBlockRuby, RoundTrips) {
+  const auto restored = loadDamagedRuby([](std::string&, size_t) {});
+  ASSERT_NE(restored, nullptr);
+  ASSERT_EQ(restored->getRubyTexts().size(), 2u);
+  EXPECT_EQ(restored->getRubyTexts()[1], "rubytext");
+}
+
+// The over-long string is complete and the rest of the block follows it intact, so only the limit rejects it.
+TEST(TextBlockRuby, RejectsARubyLengthOverTheLimit) {
+  EXPECT_EQ(loadDamagedRuby([](std::string& bytes, const size_t at) {
+              const uint32_t len = serialization::MAX_STRING_BYTES + 1;
+              bytes.replace(at, sizeof(len), reinterpret_cast<const char*>(&len), sizeof(len));
+              bytes.insert(at + sizeof(len) + std::string("rubytext").size(), len - 8, 'x');
+            }),
+            nullptr);
+}
+
+TEST(TextBlockRuby, RejectsACutOffRubyText) {
+  EXPECT_EQ(loadDamagedRuby([](std::string& bytes, const size_t at) { bytes.resize(at + sizeof(uint32_t) + 3); }),
+            nullptr);
+}

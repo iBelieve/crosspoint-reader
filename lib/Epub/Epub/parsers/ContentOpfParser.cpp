@@ -325,8 +325,17 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
       }
     }
 
+    // An id or href over the cached-string limit could not be read back; such an
+    // item is left out, so a spine itemref naming it is not found.
+    const bool storable =
+        itemId.size() <= serialization::MAX_STRING_BYTES && href.size() <= serialization::MAX_STRING_BYTES;
+    if (!storable) {
+      LOG_ERR("COF", "Skipping manifest item with an id or href over %u bytes",
+              static_cast<unsigned>(serialization::MAX_STRING_BYTES));
+    }
+
     // Record index entry for fast lookup later
-    if (self->tempItemStore) {
+    if (self->tempItemStore && storable) {
       ItemIndexEntry entry;
       entry.idHash = fnvHash(itemId);
       entry.idLen = static_cast<uint16_t>(itemId.size());
@@ -334,12 +343,12 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
       self->itemIndex.push_back(entry);
     }
 
-    if (self->tempItemStore) {
+    if (self->tempItemStore && storable) {
       serialization::writeString(self->tempItemStore, itemId);
       serialization::writeString(self->tempItemStore, href);
     }
 
-    if (itemId == self->coverItemId) {
+    if (storable && itemId == self->coverItemId) {
       // Some EPUBs set meta name="cover" to an XHTML wrapper item.
       // Only treat it as a cover image when the manifest media-type is image/*.
       if (startsWithImageMediaType(mediaType)) {
@@ -373,7 +382,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
     }
 
     // EPUB 3: Check for cover image (properties contains "cover-image")
-    if (!properties.empty() && self->coverItemHref.empty()) {
+    if (storable && !properties.empty() && self->coverItemHref.empty()) {
       if (properties == "cover-image" || properties.find("cover-image ") == 0 ||
           properties.find(" cover-image") != std::string::npos) {
         self->coverItemHref = href;
@@ -407,10 +416,15 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
             while (it != self->itemIndex.end() && it->idHash == targetHash) {
               self->tempItemStore.seek(it->fileOffset);
               std::string itemId;
-              serialization::readString(self->tempItemStore, itemId);
+              if (!serialization::tryReadString(self->tempItemStore, itemId, serialization::MAX_STRING_BYTES)) {
+                LOG_ERR("COF", "Corrupt item store entry while resolving spine idref %s", idref.c_str());
+                break;
+              }
               if (itemId == idref) {
-                serialization::readString(self->tempItemStore, href);
-                found = true;
+                found = serialization::tryReadString(self->tempItemStore, href, serialization::MAX_STRING_BYTES);
+                if (!found) {
+                  LOG_ERR("COF", "Corrupt item store href for spine idref %s", idref.c_str());
+                }
                 break;
               }
               ++it;
@@ -421,8 +435,11 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
             self->tempItemStore.seek(0);
             std::string itemId;
             while (self->tempItemStore.available()) {
-              serialization::readString(self->tempItemStore, itemId);
-              serialization::readString(self->tempItemStore, href);
+              if (!serialization::tryReadString(self->tempItemStore, itemId, serialization::MAX_STRING_BYTES) ||
+                  !serialization::tryReadString(self->tempItemStore, href, serialization::MAX_STRING_BYTES)) {
+                LOG_ERR("COF", "Corrupt item store entry while resolving spine idref %s", idref.c_str());
+                break;
+              }
               if (itemId == idref) {
                 found = true;
                 break;

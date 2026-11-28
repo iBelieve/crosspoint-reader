@@ -606,9 +606,12 @@ int Section::getTocIndexForPage(const int page) const {
     }
     if (anchorReader && anchorReader->seek(anchorStart)) {
       for (uint16_t i = 0; i < anchorCount; ++i) {
-        uint16_t anchorPage;
-        serialization::readString(*anchorReader, cachedAnchor);
-        serialization::readPod(*anchorReader, anchorPage);
+        uint16_t anchorPage = 0;
+        if (!serialization::tryReadString(*anchorReader, cachedAnchor, serialization::MAX_STRING_BYTES) ||
+            !serialization::tryReadPod(*anchorReader, anchorPage)) {
+          LOG_ERR("SCT", "Anchor map entry %u is corrupt", static_cast<unsigned>(i));
+          break;
+        }
         considerAnchor(cachedAnchor, anchorPage, true);
       }
     }
@@ -701,15 +704,19 @@ bool Section::commitBuildFile(const uint8_t version, const uint32_t bytesConsume
 
   // Write anchor-to-page map for fragment navigation (e.g. footnote targets). For a
   // partial, skip anchors that landed on the incomplete trailing page the suspend drops.
+  // Anchors over the cached-string limit are skipped: cut, they would match the wrong link.
   const uint32_t anchorMapOffset = file.position();
   const auto& anchors = build_->parser->getAnchors();
+  const auto keepAnchor = [&](const std::string& anchor, const uint16_t page) {
+    return (!asPartial || page < builtPageCount_) && anchor.size() <= serialization::MAX_STRING_BYTES;
+  };
   uint16_t anchorCount = 0;
   for (const auto& [anchor, page] : anchors) {
-    if (!asPartial || page < builtPageCount_) anchorCount++;
+    if (keepAnchor(anchor, page)) anchorCount++;
   }
   serialization::writePod(file, anchorCount);
   for (const auto& [anchor, page] : anchors) {
-    if (asPartial && page >= builtPageCount_) continue;
+    if (!keepAnchor(anchor, page)) continue;
     serialization::writeString(file, anchor);
     serialization::writePod(file, page);
   }
@@ -995,27 +1002,28 @@ bool Section::openAnchorMap(HalFile& f, uint16_t& count) const {
   }
 
   const uint32_t fileSize = f.size();
-  f.seek(HEADER_SIZE - sizeof(uint32_t) * 4);
-  uint32_t anchorMapOffset;
-  serialization::readPod(f, anchorMapOffset);
+  uint32_t anchorMapOffset = 0;
+  if (!f.seek(HEADER_SIZE - sizeof(uint32_t) * 4) || !serialization::tryReadPod(f, anchorMapOffset)) {
+    return false;
+  }
   if (anchorMapOffset == 0 || anchorMapOffset >= fileSize) {
     return false;
   }
 
-  f.seek(anchorMapOffset);
-  serialization::readPod(f, count);
-  return true;
+  return f.seek(anchorMapOffset) && serialization::tryReadPod(f, count);
 }
 
 std::optional<uint16_t> Section::getPageForAnchor(const std::string& anchor) const {
   HalFile f;
-  uint16_t count;
+  uint16_t count = 0;
   if (!openAnchorMap(f, count)) return std::nullopt;
   for (uint16_t i = 0; i < count; i++) {
     std::string key;
-    uint16_t page;
-    serialization::readString(f, key);
-    serialization::readPod(f, page);
+    uint16_t page = 0;
+    if (!serialization::tryReadString(f, key, serialization::MAX_STRING_BYTES) || !serialization::tryReadPod(f, page)) {
+      LOG_ERR("SCT", "Anchor map entry %u is corrupt", static_cast<unsigned>(i));
+      return std::nullopt;
+    }
     if (key == anchor) {
       return page;
     }

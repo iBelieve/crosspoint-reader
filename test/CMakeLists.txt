@@ -9,6 +9,14 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Instrument every target, googletest included, so containers and the code under
+# test agree on ASan's layout. Any report fails the test.
+option(CROSSPOINT_SANITIZERS "Build host tests with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(CROSSPOINT_SANITIZERS)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
 include(FetchContent)
 
 FetchContent_Declare(
