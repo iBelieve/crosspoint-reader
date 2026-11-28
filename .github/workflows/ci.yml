@@ -217,6 +217,12 @@ jobs:
         with:
           submodules: recursive
 
+      # The browser test needs Node 22's global WebSocket.
+      - uses: actions/setup-node@v4
+        if: matrix.cc == 'gcc'
+        with:
+          node-version: '22'
+
       - name: Test firmware comment and measurements
         if: matrix.cc == 'gcc'
         run: |

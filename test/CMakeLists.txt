@@ -22,14 +22,20 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# Keep in step with bblanchon/ArduinoJson in platformio.ini.
+# Keep in step with bblanchon/ArduinoJson in platformio.ini. Only src/ is used,
+# never its own build, so a local copy (FETCHCONTENT_SOURCE_DIR_ARDUINOJSON)
+# such as .pio/libdeps/default/ArduinoJson works too. lib/BlePageTurner/test
+# declares the same source.
 FetchContent_Declare(
   arduinojson
   GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
   GIT_TAG v7.4.2
   GIT_SHALLOW TRUE
+  SOURCE_SUBDIR no-build
 )
 FetchContent_MakeAvailable(arduinojson)
+add_library(crosspoint_arduinojson INTERFACE)
+target_include_directories(crosspoint_arduinojson SYSTEM INTERFACE ${arduinojson_SOURCE_DIR}/src)
 
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
@@ -42,14 +48,16 @@ target_include_directories(crosspoint_test_common INTERFACE
   ${REPO_ROOT}
   ${REPO_ROOT}/lib
 )
-# Warnings fail the build. Omitted struct fields are zero-initialized on purpose
+option(CROSSPOINT_WERROR "Fail host test builds on compiler warnings" ON)
+
+# Warnings fail the build (see CROSSPOINT_WERROR). Omitted struct fields are zero-initialized on purpose
 # (generated font headers and designated initializers rely on it).
 target_compile_options(crosspoint_test_common INTERFACE
   -Wall
   -Wextra
   -pedantic
   -Wno-missing-field-initializers
-  -Werror
+  $<$<BOOL:${CROSSPOINT_WERROR}>:-Werror>
 )
 
 # GCC reports false out-of-bounds accesses inside libstdc++'s std::sort on

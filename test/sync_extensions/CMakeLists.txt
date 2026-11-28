@@ -12,7 +12,7 @@ add_executable(SyncExtensionsTest
   ${REPO_ROOT}/lib/Memory/BuildScratch.cpp
 )
 # The suite checks with assert(); keep it on in Release builds.
-target_compile_options(SyncExtensionsTest PRIVATE -fno-exceptions -Wno-unused-parameter -UNDEBUG)
+target_compile_options(SyncExtensionsTest PRIVATE -fno-exceptions -UNDEBUG)
 target_include_directories(SyncExtensionsTest PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/stubs
   ${REPO_ROOT}/test/clipping_sync/stubs
@@ -24,5 +24,5 @@ target_include_directories(SyncExtensionsTest PRIVATE
   ${REPO_ROOT}/lib/Serialization
   ${REPO_ROOT}/lib/Utf8
 )
-target_link_libraries(SyncExtensionsTest PRIVATE crosspoint_test_common ArduinoJson)
+target_link_libraries(SyncExtensionsTest PRIVATE crosspoint_test_common crosspoint_arduinojson)
 add_test(NAME SyncExtensionsTest COMMAND SyncExtensionsTest)
