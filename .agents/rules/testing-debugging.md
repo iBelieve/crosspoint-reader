@@ -79,9 +79,10 @@ CI builds only `x4c` (X4 Classic) by default. To build every board, add the
 changes to shared board code, the HAL, the SDK pin, or `platformio.ini`; for
 code that x4c does not compile (other `FREEINK_DEVICE_*` blocks, or
 capabilities x4c lacks such as `FREEINK_CAP_TOUCH`); and for work meant for
-upstream. Check that the PR's firmware comment then lists
-every board. cppcheck covers only `x4c` either way. Releases still build every
-board.
+upstream. The required Test Status check shows the latest run to finish, so
+before merging, wait for the labeled run's Test Status and check that the PR's
+firmware comment lists every board. cppcheck covers only `x4c` either way.
+Releases still build every board.
 
 ### Serial Monitor Options
 
