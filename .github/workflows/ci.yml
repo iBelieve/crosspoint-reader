@@ -231,8 +231,11 @@ jobs:
 
       - name: Test web UI plugin navigation
         if: matrix.cc == 'gcc'
+        # Ubuntu 24.04's AppArmor blocks the user namespaces Chrome's sandbox needs.
         # The browser test uses the runner's preinstalled Chrome and skips without it.
-        run: node --test test/test_webui_plugin_navigation.cjs test/test_webui_plugin_navigation_browser.cjs
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          node --test test/test_webui_plugin_navigation.cjs test/test_webui_plugin_navigation_browser.cjs
 
       - name: Install build tools
         run: |

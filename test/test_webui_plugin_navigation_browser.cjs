@@ -113,7 +113,10 @@ test('Tab after jumping to a later plugin begins inside its card', {
     '--headless=new', '--disable-gpu', '--no-first-run',
     '--no-default-browser-check', '--disable-extensions',
     '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'
-  ], {stdio: 'ignore', windowsHide: true});
+  ], {stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true});
+  // Kept so a failed start says why.
+  let stderr = '';
+  child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-4000); });
   let cdp;
   try {
     let port;
@@ -123,10 +126,10 @@ test('Tab after jumping to a later plugin begins inside its card', {
         port = Number(fs.readFileSync(file, 'utf8').split('\n')[0]);
         break;
       }
-      if (child.exitCode !== null) throw new Error('Headless browser exited before opening');
+      if (child.exitCode !== null) throw new Error('Headless browser exited before opening:\n' + stderr);
       await wait(100);
     }
-    assert.ok(port, 'headless browser failed to open debugging port');
+    assert.ok(port, 'headless browser failed to open debugging port:\n' + stderr);
     cdp = await connect(port);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
