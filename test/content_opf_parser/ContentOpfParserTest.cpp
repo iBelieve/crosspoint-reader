@@ -4,6 +4,7 @@
 
 #include "ContentOpfParser.h"
 #include "Epub/BookMetadataCache.h"
+#include "Serialization.h"
 
 namespace {
 
@@ -249,6 +250,23 @@ TEST(ContentOpfParserCover, ResolvesEpub3CoverWithoutReadingCacheStorage) {
   }
   EXPECT_EQ(Storage.writeOpens, 0);
   EXPECT_EQ(Storage.readOpens, 0);
+}
+
+// A manifest item over the cached-string limit can't be stored, so it is not a cover candidate either.
+TEST(ContentOpfParserCover, SkipsAnOverLongCoverImageItem) {
+  const std::string longHref(serialization::MAX_STRING_BYTES + 1, 'x');
+  const std::string xml = R"(<package><metadata/><manifest>
+    <item id="big" href=")" +
+                          longHref + R"(" media-type="image/png" properties="cover-image"/>
+    <item id="cover" href="cover.png" media-type="image/png" properties="cover-image"/>
+    </manifest><spine/></package>)";
+  // The parser keeps references to these paths.
+  const std::string cachePath = "/missing-cache";
+  const std::string basePath = "OPS/";
+  Storage = {};
+  ContentOpfParser parser(cachePath, basePath, xml.size(), nullptr);
+  parse(parser, xml);
+  EXPECT_EQ(parser.coverItemHref, "OPS/cover.png");
 }
 
 TEST(ContentOpfParserCover, ReadingParserStillOpensManifestCache) {

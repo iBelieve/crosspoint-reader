@@ -140,6 +140,8 @@ class ZipFileTest : public ::testing::Test {
   // ZipFile keeps a reference to its path, so the fixture owns the string.
   const std::string path = "/books/sample.epub";
 
+  void TearDown() override { HalFile::maxReadBytes = SIZE_MAX; }
+
   void install(ZipBuilder& builder) {
     std::vector<uint8_t> bytes = builder.build();
     centralDirOffset = builder.centralDirOffset;
@@ -336,7 +338,9 @@ TEST_F(ZipFileTest, FailsOpenWhenTheEndOfDirectoryScanReadsShort) {
   ZipBuilder builder;
   builder.addStored("mimetype", "application/epub+zip").addStored("a.txt", "aaaa");
   install(builder);
-  HalFile::maxReadBytes = 16;  // fewer bytes than the scan asks for
+  // One byte short of the whole-file scan: the record itself is still read, so only the
+  // read-size check can reject it.
+  HalFile::maxReadBytes = endOfDirectoryOffset + 22 - 1;
   ZipFile zip(path);
   size_t size = 0;
   EXPECT_FALSE(zip.getInflatedFileSize("a.txt", &size));

@@ -79,14 +79,17 @@ inline bool tryWriteString(HalFile& file, const std::string& s) {
 // or the length exceeds maxLength or the bytes left in the file.
 inline bool tryReadString(HalFile& file, std::string& s, const size_t maxLength) {
   uint32_t len = 0;
-  if (!tryReadPod(file, len)) return false;
+  if (!tryReadPod(file, len) || len > maxLength) return false;
+  if (len == 0) {
+    s.clear();
+    return true;
+  }
   const int remaining = file.available();
-  if (static_cast<size_t>(len) > maxLength || static_cast<size_t>(len) > s.max_size() ||
-      len > static_cast<uint32_t>(std::numeric_limits<int>::max()) || remaining < 0 ||
-      len > static_cast<uint32_t>(remaining)) {
+  if (static_cast<size_t>(len) > s.max_size() || len > static_cast<uint32_t>(std::numeric_limits<int>::max()) ||
+      remaining < 0 || len > static_cast<uint32_t>(remaining)) {
     return false;
   }
   s.resize(len);
-  return len == 0 || file.read(&s[0], len) == static_cast<int>(len);
+  return file.read(&s[0], len) == static_cast<int>(len);
 }
 }  // namespace serialization
