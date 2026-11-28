@@ -7,6 +7,7 @@
 #include <MemoryManager.h>
 #include <Serialization.h>
 
+#include <algorithm>
 #include <cstring>
 #include <string_view>
 
@@ -54,21 +55,10 @@ void TextBlock::bindArenaPointers() {
 TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<int16_t>& wordXpos,
                      const std::vector<EpdFontFamily::Style>& wordStyles, const std::vector<uint8_t>& focusBoundary,
                      const std::vector<uint16_t>& focusSplitX, const BlockStyle& blockStyle,
-                     std::vector<std::string> rubyTexts, std::vector<LinkSpan> linkSpans,
+                     std::vector<std::string> wordRubyTexts, std::vector<LinkSpan> linkSpans,
                      const std::vector<SourceRange>& ranges, const uint16_t paragraphStartWord,
                      const std::vector<std::string>& displayWords)
-    : blockStyle(blockStyle),
-      paragraphStartWord(paragraphStartWord),
-      rubyTexts(std::move(rubyTexts)),
-      linkSpans(std::move(linkSpans)) {
-  // Same invariant as deserialize(): a block never holds an all-empty rubyTexts, so a
-  // ruby-less line costs nothing beyond its arena. The layout engine hands one over for
-  // every line it extracts, ruby or not; release it here rather than carrying it for the
-  // block's lifetime. Move-assigning an empty vector frees the buffer (clear() would not).
-  if (!hasRuby()) {
-    this->rubyTexts = std::vector<std::string>{};
-  }
-
+    : blockStyle(blockStyle), paragraphStartWord(paragraphStartWord), linkSpans(std::move(linkSpans)) {
   // Focus annotations are optional: empty vectors mean no word in this block has a split.
   // When present, they must be sized in lockstep with words[].
   const bool hasFocus = !focusBoundary.empty();
@@ -178,13 +168,27 @@ TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<in
       display[dOff++] = '\0';
     }
   }
-}
 
-bool TextBlock::hasRuby() const {
-  for (const auto& rt : rubyTexts) {
-    if (!rt.empty()) return true;
+  // Same invariant as deserialize(): a ruby-less line keeps rubyTexts null. Layout
+  // passes none, or one entry per word; a shorter list leaves later words bare.
+  const size_t rubyCount = std::min<size_t>(wordRubyTexts.size(), numWords);
+  for (size_t i = 0; i < rubyCount; i++) {
+    if (wordRubyTexts[i].empty()) continue;
+    const size_t rubyBytes = static_cast<size_t>(numWords) * sizeof(std::string);
+    rubyTexts = makeUniqueNoThrow<std::string[]>(numWords);
+    if (!rubyTexts) {
+      // Same evict-and-retry as the arena.
+      freeink::MemoryManager::instance().ensureFree(rubyBytes + 4 * 1024);
+      rubyTexts = makeUniqueNoThrow<std::string[]>(numWords);
+    }
+    if (!rubyTexts) {
+      LOG_ERR("TXB", "OOM: ruby texts %u bytes", static_cast<uint32_t>(rubyBytes));
+      isValid = false;
+      return;
+    }
+    for (size_t j = i; j < rubyCount; j++) rubyTexts[j].swap(wordRubyTexts[j]);
+    break;
   }
-  return false;
 }
 
 bool TextBlock::setWordFonts(const uint8_t* slots, const int32_t (&fonts)[MAX_WORD_FONTS]) {
@@ -264,12 +268,18 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
     const size_t e = k == br.size() ? s.size() : br[k];
     out.assign(s.data() + b, e - b);
   };
-  const bool blockHasRuby = hasRuby();
-  std::vector<RubyDrawInfo> rubies;
-  if (blockHasRuby && !scanning) {
-    rubies.resize(numWords);
+  // Checked: a corrupt cache can claim thousands of words. Without it the line draws bare.
+  std::unique_ptr<RubyDrawInfo[]> rubies;
+  if (hasRuby() && !scanning) {
+    rubies = makeUniqueNoThrow<RubyDrawInfo[]>(numWords);
+    if (!rubies) {
+      LOG_ERR("TXB", "OOM: ruby layout %u bytes", static_cast<uint32_t>(numWords * sizeof(RubyDrawInfo)));
+    }
+  }
+  const bool blockHasRuby = hasRuby() && (scanning || rubies);
+  if (rubies) {
     for (uint16_t i = 0; i < numWords; i++) {
-      if (i < rubyTexts.size() && !rubyTexts[i].empty() && (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
+      if (!rubyTexts[i].empty() && (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
         int groupWordCount = 1;
         while (i + groupWordCount < numWords && (wordStyle(i + groupWordCount) & EpdFontFamily::RUBY_CONTINUE) != 0) {
           groupWordCount++;
@@ -358,8 +368,6 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
     }
   };
 
-  // Loop-invariant: hoisted out of the word loop so rubyTexts is scanned once,
-  // not once per word.
   const int rubyShift = getRubyShift(ascender);
 
   for (uint16_t i = 0; i < numWords; i++) {
@@ -411,8 +419,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
     }
 
     // Horizontal ruby text rendering
-    if (blockHasRuby && i < rubyTexts.size() && !rubyTexts[i].empty() &&
-        (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
+    if (blockHasRuby && !rubyTexts[i].empty() && (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
       if (scanning) {
         renderer.drawText(fontId, 0, 0, rubyTexts[i].c_str(), true, EpdFontFamily::SUP);
       } else {
@@ -512,13 +519,12 @@ bool TextBlock::serialize(HalFile& file) const {
   // Word data: scalars, then the arena verbatim -- its in-memory layout is
   // exactly the on-disk layout (see TextBlock.h), so one write covers all
   // per-word arrays and the text blob.
-  serialization::writePod(file, numWords);
-  serialization::writePod(file,
-                          static_cast<uint8_t>((focusPresent ? FLAG_FOCUS : 0) | (displayPresent ? FLAG_DISPLAY : 0)));
-  serialization::writePod(file, textBytes);
-  serialization::writePod(file, paragraphStartWord);
-  if (displayPresent) {
-    serialization::writePod(file, displayBytes);
+  const auto flags = static_cast<uint8_t>((focusPresent ? FLAG_FOCUS : 0) | (displayPresent ? FLAG_DISPLAY : 0));
+  if (!serialization::tryWritePod(file, numWords) || !serialization::tryWritePod(file, flags) ||
+      !serialization::tryWritePod(file, textBytes) || !serialization::tryWritePod(file, paragraphStartWord) ||
+      (displayPresent && !serialization::tryWritePod(file, displayBytes))) {
+    LOG_ERR("TXB", "Serialization failed: header");
+    return false;
   }
   if (numWords > 0) {
     const size_t size = arenaSize(numWords, focusPresent, textBytes, displayPresent, displayBytes);
@@ -529,31 +535,37 @@ bool TextBlock::serialize(HalFile& file) const {
   }
 
   // Ruby text data
-  for (size_t i = 0; i < numWords; i++) {
-    serialization::writeString(file, (i < rubyTexts.size()) ? rubyTexts[i] : std::string());
+  static const std::string NO_RUBY;
+  for (uint16_t i = 0; i < numWords; i++) {
+    if (!serialization::writeString(file, rubyTexts ? rubyTexts[i] : NO_RUBY)) {
+      LOG_ERR("TXB", "Serialization failed: ruby text %u", static_cast<unsigned>(i));
+      return false;
+    }
   }
 
-  // Style (alignment + margins/padding/indent)
-  serialization::writePod(file, blockStyle.alignment);
-  serialization::writePod(file, blockStyle.textAlignDefined);
-  serialization::writePod(file, blockStyle.marginTop);
-  serialization::writePod(file, blockStyle.marginBottom);
-  serialization::writePod(file, blockStyle.marginLeft);
-  serialization::writePod(file, blockStyle.marginRight);
-  serialization::writePod(file, blockStyle.paddingTop);
-  serialization::writePod(file, blockStyle.paddingBottom);
-  serialization::writePod(file, blockStyle.paddingLeft);
-  serialization::writePod(file, blockStyle.paddingRight);
-  serialization::writePod(file, blockStyle.textIndent);
-  serialization::writePod(file, blockStyle.textIndentDefined);
-  serialization::writePod(file, blockStyle.isRtl);
-  serialization::writePod(file, blockStyle.directionDefined);
-  serialization::writePod(file, blockStyle.characterSpacing);
-  serialization::writePod(file, blockStyle.fontId);
-
-  // Per-word fonts: a flag, then the font table and one slot per word.
+  // Style (alignment + margins/padding/indent), then the per-word font flag.
   const uint8_t hasWordFonts = wordFontData ? 1 : 0;
-  serialization::writePod(file, hasWordFonts);
+  const bool styleWritten = serialization::tryWritePod(file, blockStyle.alignment) &&
+                            serialization::tryWritePod(file, blockStyle.textAlignDefined) &&
+                            serialization::tryWritePod(file, blockStyle.marginTop) &&
+                            serialization::tryWritePod(file, blockStyle.marginBottom) &&
+                            serialization::tryWritePod(file, blockStyle.marginLeft) &&
+                            serialization::tryWritePod(file, blockStyle.marginRight) &&
+                            serialization::tryWritePod(file, blockStyle.paddingTop) &&
+                            serialization::tryWritePod(file, blockStyle.paddingBottom) &&
+                            serialization::tryWritePod(file, blockStyle.paddingLeft) &&
+                            serialization::tryWritePod(file, blockStyle.paddingRight) &&
+                            serialization::tryWritePod(file, blockStyle.textIndent) &&
+                            serialization::tryWritePod(file, blockStyle.textIndentDefined) &&
+                            serialization::tryWritePod(file, blockStyle.isRtl) &&
+                            serialization::tryWritePod(file, blockStyle.directionDefined) &&
+                            serialization::tryWritePod(file, blockStyle.characterSpacing) &&
+                            serialization::tryWritePod(file, blockStyle.fontId) &&
+                            serialization::tryWritePod(file, hasWordFonts);
+  if (!styleWritten) {
+    LOG_ERR("TXB", "Serialization failed: block style");
+    return false;
+  }
   if (hasWordFonts) {
     const size_t size = sizeof(int32_t) * MAX_WORD_FONTS + numWords;
     if (file.write(wordFontData.get(), size) != size) {
@@ -658,11 +670,10 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   }
 
   // Ruby text data. Ruby is a CJK feature, so for nearly every book every entry here
-  // is the empty string. Materializing the vector regardless costs wordCount * 24 bytes
+  // is the empty string. Materializing the array regardless costs wordCount * 24 bytes
   // (sizeof(std::string)) plus a heap block per line, held for as long as the page is
-  // resident -- several KB of DRAM on a full page, none of it ever read. An empty
-  // rubyTexts is already the "no ruby" representation: hasRuby() reports false and every
-  // other reader is guarded by `i < rubyTexts.size()`, so allocate lazily and only once a
+  // resident -- several KB of DRAM on a full page, none of it ever read. A null
+  // rubyTexts is the "no ruby" representation, so allocate lazily and only once a
   // non-empty annotation actually shows up.
   //
   // `scratch` is reused across words; swapping hands its buffer to the block and takes back
@@ -674,8 +685,12 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
       return nullptr;
     }
     if (scratch.empty()) continue;
-    if (block->rubyTexts.empty()) {
-      block->rubyTexts.resize(wc);
+    if (!block->rubyTexts) {
+      block->rubyTexts = makeUniqueNoThrow<std::string[]>(wc);
+      if (!block->rubyTexts) {
+        LOG_ERR("TXB", "OOM: ruby texts %u bytes", static_cast<uint32_t>(wc * sizeof(std::string)));
+        return nullptr;
+      }
     }
     block->rubyTexts[i].swap(scratch);
   }

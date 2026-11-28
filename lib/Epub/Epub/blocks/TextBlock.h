@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -79,8 +80,8 @@ class TextBlock final : public Block {
   bool focusPresent = false;
   bool displayPresent = false;
   bool isValid = true;
-  // The ONLY allocation: makeUniqueNoThrow, so OOM yields an invalid block
-  // instead of abort() (bare new is not nothrow with -fno-exceptions).
+  // Per-word data. The arena, ruby and word-font arrays are makeUniqueNoThrow, so
+  // OOM yields an invalid block instead of abort() (-fno-exceptions).
   std::unique_ptr<uint8_t[]> arena;
   // Typed views into the arena, bound once after the arena is filled. All
   // 16-bit bases sit at even offsets, so direct dereference is alignment-safe.
@@ -91,7 +92,9 @@ class TextBlock final : public Block {
   const uint8_t* stylesArr = nullptr;
   const uint8_t* focusBoundaryArr = nullptr;  // null when !focusPresent
   const char* textArr = nullptr;
-  std::vector<std::string> rubyTexts;
+  // One entry per word, or null when no word has ruby (nearly every line). A
+  // checked allocation: a corrupt cache can claim thousands of words.
+  std::unique_ptr<std::string[]> rubyTexts;
   // Words sized apart from the line (CSS font-size spans): MAX_WORD_FONTS int32 font ids,
   // then one slot per word (0 = block font, n = font n-1). Null when every word uses the
   // block font, so ordinary lines pay only this pointer.
@@ -112,13 +115,13 @@ class TextBlock final : public Block {
 
  public:
   // Flatten-on-construct: copies the layout-time vectors into the arena; the
-  // vectors die with the caller. On arena OOM the block is empty and valid()
-  // is false -- callers must check and fail the line instead of using it.
+  // vectors die with the caller. On OOM valid() is false -- callers must
+  // check and fail the line instead of using it.
   // displayWords is empty, or sized like words with "" for words that draw as is.
   explicit TextBlock(const std::vector<std::string>& words, const std::vector<int16_t>& wordXpos,
                      const std::vector<EpdFontFamily::Style>& wordStyles, const std::vector<uint8_t>& focusBoundary,
                      const std::vector<uint16_t>& focusSplitX, const BlockStyle& blockStyle = BlockStyle(),
-                     std::vector<std::string> rubyTexts = {}, std::vector<LinkSpan> linkSpans = {},
+                     std::vector<std::string> wordRubyTexts = {}, std::vector<LinkSpan> linkSpans = {},
                      const std::vector<SourceRange>& ranges = {}, uint16_t paragraphStartWord = UINT16_MAX,
                      const std::vector<std::string>& displayWords = {});
   ~TextBlock() override = default;
@@ -179,9 +182,12 @@ class TextBlock final : public Block {
   bool wordHasDiscretionaryHyphen(const uint16_t i) const { return (stylesArr[i] & DISCRETIONARY_HYPHEN_FLAG) != 0; }
   uint8_t focusBoundary(const uint16_t i) const { return focusPresent ? focusBoundaryArr[i] : 0; }
   uint16_t focusSplitX(const uint16_t i) const { return focusPresent ? focusSplitXArr[i] : 0; }
-  bool hasRuby() const;
+  bool hasRuby() const { return rubyTexts != nullptr; }
   int getRubyShift(int ascender) const { return hasRuby() ? (ascender / 2) : 0; }
-  const std::vector<std::string>& getRubyTexts() const { return rubyTexts; }
+  // Empty when word i has no ruby annotation.
+  std::string_view rubyText(const uint16_t i) const {
+    return rubyTexts ? std::string_view(rubyTexts[i]) : std::string_view();
+  }
   std::vector<LinkSpan> takeLinkSpans() { return std::move(linkSpans); }
 
   void render(const GfxRenderer& renderer, int fontId, int x, int y) const;

@@ -268,7 +268,7 @@ TEST_F(ChapterHtmlSlimParserTest, RubySurvivesPartialParagraphExtraction) {
       renderer, 0, 20,
       [&](std::unique_ptr<TextBlock> line, auto) {
         ++lines;
-        EXPECT_TRUE(line->getRubyTexts().empty());
+        EXPECT_FALSE(line->hasRuby());
       },
       false);
   EXPECT_EQ(lines, 1u);
@@ -277,9 +277,10 @@ TEST_F(ChapterHtmlSlimParserTest, RubySurvivesPartialParagraphExtraction) {
   ASSERT_LT(retainedWords, 3u);
   text.layoutAndExtractLines(renderer, 0, 200, [&](std::unique_ptr<TextBlock> line, auto) {
     ++lines;
-    ASSERT_EQ(line->getRubyTexts().size(), retainedWords);
-    EXPECT_EQ(line->getRubyTexts().back(), "c");
-    for (size_t i = 0; i + 1 < retainedWords; ++i) EXPECT_TRUE(line->getRubyTexts()[i].empty());
+    ASSERT_EQ(static_cast<size_t>(line->wordCount()), retainedWords);
+    ASSERT_TRUE(line->hasRuby());
+    EXPECT_EQ(line->rubyText(static_cast<uint16_t>(retainedWords - 1)), "c");
+    for (uint16_t i = 0; i + 1u < retainedWords; ++i) EXPECT_TRUE(line->rubyText(i).empty());
   });
   EXPECT_EQ(lines, 2u);
 }

@@ -72,11 +72,7 @@ void PageLine::render(GfxRenderer& renderer, const int fontId, const int xOffset
 }
 
 bool PageLine::serialize(HalFile& file) {
-  serialization::writePod(file, xPos);
-  serialization::writePod(file, yPos);
-
-  // serialize TextBlock pointed to by PageLine
-  return block->serialize(file);
+  return serialization::tryWritePod(file, xPos) && serialization::tryWritePod(file, yPos) && block->serialize(file);
 }
 
 std::unique_ptr<PageLine> PageLine::deserialize(HalFile& file) {
@@ -109,11 +105,8 @@ void PageImage::renderPlaceholder(GfxRenderer& renderer, const int xOffset, cons
 }
 
 bool PageImage::serialize(HalFile& file) {
-  serialization::writePod(file, xPos);
-  serialization::writePod(file, yPos);
-
-  // serialize ImageBlock
-  return imageBlock->serialize(file);
+  return serialization::tryWritePod(file, xPos) && serialization::tryWritePod(file, yPos) &&
+         imageBlock->serialize(file);
 }
 
 std::unique_ptr<PageImage> PageImage::deserialize(HalFile& file) {
@@ -145,11 +138,8 @@ void PageHorizontalRule::render(GfxRenderer& renderer, const int fontId, const i
 }
 
 bool PageHorizontalRule::serialize(HalFile& file) {
-  serialization::writePod(file, xPos);
-  serialization::writePod(file, yPos);
-  serialization::writePod(file, width);
-  serialization::writePod(file, thickness);
-  return true;
+  return serialization::tryWritePod(file, xPos) && serialization::tryWritePod(file, yPos) &&
+         serialization::tryWritePod(file, width) && serialization::tryWritePod(file, thickness);
 }
 
 std::unique_ptr<PageHorizontalRule> PageHorizontalRule::deserialize(HalFile& file) {
@@ -195,14 +185,11 @@ void PageDropCap::render(GfxRenderer& renderer, const int sectionFontId, const i
 }
 
 bool PageDropCap::serialize(HalFile& file) {
-  serialization::writePod(file, xPos);
-  serialization::writePod(file, yPos);
-  serialization::writePod(file, fontId);
-  serialization::writePod(file, scale256);
-  serialization::writePod(file, static_cast<uint8_t>(style));
   const auto length = static_cast<uint8_t>(strnlen(text, MAX_TEXT_BYTES));
-  serialization::writePod(file, length);
-  return file.write(text, length) == length;
+  return serialization::tryWritePod(file, xPos) && serialization::tryWritePod(file, yPos) &&
+         serialization::tryWritePod(file, fontId) && serialization::tryWritePod(file, scale256) &&
+         serialization::tryWritePod(file, static_cast<uint8_t>(style)) && serialization::tryWritePod(file, length) &&
+         file.write(text, length) == length;
 }
 
 std::unique_ptr<PageDropCap> PageDropCap::deserialize(HalFile& file) {
@@ -250,16 +237,17 @@ void PageBorderBox::render(GfxRenderer& renderer, const int, const int xOffset, 
 }
 
 bool PageBorderBox::serialize(HalFile& file) {
-  serialization::writePod(file, xPos);
-  serialization::writePod(file, yPos);
-  serialization::writePod(file, width);
-  serialization::writePod(file, height);
-  for (const CssBorderSide& side : sides) {
-    serialization::writePod(file, side.width);
-    serialization::writePod(file, static_cast<uint8_t>(side.style));
+  if (!serialization::tryWritePod(file, xPos) || !serialization::tryWritePod(file, yPos) ||
+      !serialization::tryWritePod(file, width) || !serialization::tryWritePod(file, height)) {
+    return false;
   }
-  serialization::writePod(file, shaded);
-  return true;
+  for (const CssBorderSide& side : sides) {
+    if (!serialization::tryWritePod(file, side.width) ||
+        !serialization::tryWritePod(file, static_cast<uint8_t>(side.style))) {
+      return false;
+    }
+  }
+  return serialization::tryWritePod(file, shaded);
 }
 
 std::unique_ptr<PageBorderBox> PageBorderBox::deserialize(HalFile& file) {
@@ -322,20 +310,24 @@ void Page::renderWithImagePlaceholders(GfxRenderer& renderer, const int fontId, 
 
 bool Page::serialize(HalFile& file) const {
   const uint16_t count = elements.size();
-  serialization::writePod(file, count);
+  if (!serialization::tryWritePod(file, count)) {
+    LOG_ERR("PGE", "Failed to write element count");
+    return false;
+  }
 
   for (const auto& el : elements) {
-    // Use getTag() method to determine type
-    serialization::writePod(file, static_cast<uint8_t>(el->getTag()));
-
-    if (!el->serialize(file)) {
+    if (!serialization::tryWritePod(file, static_cast<uint8_t>(el->getTag())) || !el->serialize(file)) {
+      LOG_ERR("PGE", "Failed to write element");
       return false;
     }
   }
 
   // Serialize footnotes (clamp to MAX_FOOTNOTES_PER_PAGE to match addFootnote/deserialize limits)
   const uint16_t fnCount = std::min<uint16_t>(footnotes.size(), MAX_FOOTNOTES_PER_PAGE);
-  serialization::writePod(file, fnCount);
+  if (!serialization::tryWritePod(file, fnCount)) {
+    LOG_ERR("PGE", "Failed to write footnote count");
+    return false;
+  }
   for (uint16_t i = 0; i < fnCount; i++) {
     const auto& fn = footnotes[i];
     if (file.write(fn.number, sizeof(fn.number)) != sizeof(fn.number) ||
@@ -346,17 +338,18 @@ bool Page::serialize(HalFile& file) const {
   }
 
   const uint16_t linkCount = std::min<uint16_t>(links.size(), MAX_LINKS_PER_PAGE);
-  serialization::writePod(file, linkCount);
+  if (!serialization::tryWritePod(file, linkCount)) {
+    LOG_ERR("PGE", "Failed to write link count");
+    return false;
+  }
   for (uint16_t i = 0; i < linkCount; i++) {
     const auto& link = links[i];
-    if (file.write(link.href, sizeof(link.href)) != sizeof(link.href)) {
+    if (file.write(link.href, sizeof(link.href)) != sizeof(link.href) || !serialization::tryWritePod(file, link.x) ||
+        !serialization::tryWritePod(file, link.y) || !serialization::tryWritePod(file, link.width) ||
+        !serialization::tryWritePod(file, link.height)) {
       LOG_ERR("PGE", "Failed to write link %u", i);
       return false;
     }
-    serialization::writePod(file, link.x);
-    serialization::writePod(file, link.y);
-    serialization::writePod(file, link.width);
-    serialization::writePod(file, link.height);
   }
 
   return true;
