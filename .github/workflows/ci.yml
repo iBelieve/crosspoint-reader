@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Every source on one four-core runner takes about 8 minutes.
+        # Every source on one four-core runner takes about 15 minutes.
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v6

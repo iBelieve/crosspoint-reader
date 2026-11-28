@@ -52,8 +52,8 @@ def check_version(binary):
 
 
 def configure(build_dir):
-    # The Clang-only flags in test/CMakeLists.txt silence warnings that clang-tidy
-    # would otherwise report as clang-diagnostic-* findings.
+    # Clang-only flags in the test CMake files (chapter_html_slim_parser) silence
+    # warnings that clang-tidy would otherwise report as clang-diagnostic-* findings.
     if not (shutil.which("clang") and shutil.which("clang++")):
         sys.exit("clang and clang++ not found; the compile database must come from a Clang build.")
     # Configure every run so the database follows CMakeLists.txt changes; it is
@@ -64,9 +64,20 @@ def configure(build_dir):
     return os.path.join(build_dir, "compile_commands.json")
 
 
-def defines(entry):
+def variant(entry):
+    """The arguments that change what clang-tidy sees: macros and include paths."""
     args = entry.get("arguments") or shlex.split(entry["command"])
-    return tuple(sorted(a for a in args if a.startswith("-D")))
+    kept, take_next = [], False
+    for arg in args:
+        if take_next:
+            kept[-1] += " " + arg
+            take_next = False
+        elif arg in ("-I", "-isystem", "-iquote", "-include", "-D"):
+            kept.append(arg)
+            take_next = True
+        elif arg.startswith(("-D", "-I", "-isystem", "-iquote", "-include")):
+            kept.append(arg)
+    return tuple(kept)
 
 
 def excluded(path, build_rel):
@@ -74,10 +85,11 @@ def excluded(path, build_rel):
 
 
 def filtered_database(database, build_dir, out_dir):
-    """Keeps one compile command per source and set of -D flags.
+    """Keeps one compile command per source, macro set and include path list.
 
-    Several test targets compile the same library source with the same macros;
-    clang-tidy would otherwise analyze it once per target.
+    Several test targets compile the same library source with the same flags;
+    clang-tidy would otherwise analyze it once per target. clang-tidy runs every
+    entry kept for a file, so builds against different stubs are all checked.
     """
     with open(database, encoding="utf-8") as f:
         entries = json.load(f)
@@ -85,7 +97,7 @@ def filtered_database(database, build_dir, out_dir):
     kept, seen = [], set()
     for entry in entries:
         path = os.path.relpath(os.path.join(entry["directory"], entry["file"]), ROOT)
-        key = (path, defines(entry))
+        key = (path, variant(entry))
         if excluded(path, build_rel) or key in seen:
             continue
         seen.add(key)
@@ -127,19 +139,25 @@ def main():
     parser.add_argument("--fix", action="store_true", help="apply suggested fixes (runs serially)")
     parser.add_argument("--shard", default="1/1", help="check only part K of N of the sources, as K/N")
     args = parser.parse_args()
+    try:
+        shard, shards = (int(n) for n in args.shard.split("/"))
+    except ValueError:
+        parser.error(f"--shard {args.shard}: expected K/N")
+    if not 1 <= shard <= shards:
+        parser.error(f"--shard {args.shard}: expected K/N with 1 <= K <= N")
+    if args.jobs < 1:
+        parser.error("-j must be at least 1")
 
     binary = find_clang_tidy()
     check_version(binary)
     build_dir = os.path.abspath(args.build_dir)
     tidy_db = os.path.join(build_dir, "clang-tidy")
     paths = select(filtered_database(configure(build_dir), build_dir, tidy_db), args.files or None)
-    shard, shards = (int(n) for n in args.shard.split("/"))
-    if not 1 <= shard <= shards:
-        sys.exit(f"--shard {args.shard}: expected K/N with 1 <= K <= N")
     paths = paths[shard - 1 :: shards]
     if not paths:
+        # A full run that finds nothing means the database or filters are wrong.
         print("No sources to check.")
-        return 0
+        return 0 if args.files else 1
 
     # Parallel --fix runs can write the same header at once.
     jobs = 1 if args.fix else args.jobs
