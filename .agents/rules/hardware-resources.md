@@ -37,13 +37,15 @@ such as apps, against it: they may use its PSRAM and larger internal RAM.
 - Every release target in `.github/workflows/release.yml` must still build.
 - When a feature needs more memory than a board has (for example the C3 or
   OnePage), compile it out of that board with a compile-time gate:
-  `FREEINK_DEVICE_*`, `FREEINK_CAP_*`, or a new `-D` flag. A runtime check
+  `FREEINK_MCU_*` to drop a whole chip family (as `src/main.cpp` does with
+  `FREEINK_MCU_C3`), `FREEINK_DEVICE_*`, `FREEINK_CAP_*`, or a new `-D` flag.
+  Include `BoardConfig.h` first, or `#if` reads these as 0. A runtime check
   leaves the code in the build. Put a new flag in every env with that board's
   `FREEINK_DEVICE_*` flag (for the C3: `default`, `gh_release`,
   `gh_release_rc` and `slim`; for others: `<board>`, `<board>-gh_release` and
-  `<board>-gh_release_rc`). CI builds only the dev env of each board, so build
-  one release env of each affected board locally, or say in the PR that you
-  could not. Say in the PR which boards leave the feature out.
+  `<board>-gh_release_rc`). Add the `all-boards` label to the PR: without it CI
+  builds only `x4c`, and with it only each board's dev env. Build one release
+  env of each affected board locally, or say in the PR that you could not. Say in the PR which boards leave the feature out.
 - Changes to the shared reader core must keep working on every release
   target. Use per-board limits where needed, as `CLIPPING_MAX_PER_BOOK` in
   `src/ClippingStore.h` does.

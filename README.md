@@ -211,7 +211,7 @@ pio run -e x4c --target upload
 
 ```bash
 ./bin/clang-format-fix
-pio check -e x4c
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
 pio run -e x4c
 ```
 

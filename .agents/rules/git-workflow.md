@@ -87,8 +87,8 @@ below are from the repository root.
   `.github/scripts/pr-firmware-comment.js` and `firmware-size-comparison.js`
   (built-board list, cancelled and superseded runs, missing-baseline wording),
   `test/firmware_comment.test.js` (tests for those), `README.md` (scope links, x4c
-  pre-PR and flash commands), `docs/contributing/` (x4c check, build and flash
-  commands), `ROADMAP.md`
+  pre-PR and flash commands), `docs/contributing/` (x4c commands, CI coverage in
+  `touch-and-ui.md`, x4c target in `architecture.md`), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
