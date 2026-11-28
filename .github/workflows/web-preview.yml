@@ -114,7 +114,18 @@ jobs:
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT"
           status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api")
           if [ "$status" = 404 ]; then
-            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=develop
+            # Another run may create it at the same time; check again if this fails.
+            if ! npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=develop; then
+              for _ in 1 2 3 4 5; do
+                sleep 5
+                status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api") || status=000
+                [ "$status" = 200 ] && break
+              done
+              if [ "$status" != 200 ]; then
+                echo "::error::could not create the Cloudflare Pages project (lookup now returns HTTP $status)"
+                exit 1
+              fi
+            fi
           elif [ "$status" != 200 ]; then
             echo "::error::Cloudflare Pages project lookup returned HTTP $status"
             exit 1
