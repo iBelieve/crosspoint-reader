@@ -73,6 +73,9 @@ jobs:
           source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
           pio run -e simulator_web
 
+      - name: Test the site assembler
+        run: python3 -m unittest discover -s test/simulator -p 'test_web_site.py'
+
       - name: Assemble site
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -108,7 +111,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          set -o pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT"
           status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api")
           if [ "$status" = 404 ]; then
@@ -117,8 +119,12 @@ jobs:
             echo "::error::Cloudflare Pages project lookup returned HTTP $status"
             exit 1
           fi
+          # pipefail only here: a failed wrangler run must fail the step, but
+          # the URL greps below may legitimately find nothing.
+          set -o pipefail
           npx --yes wrangler@4 pages deploy sim-site --project-name="$PAGES_PROJECT" \
             --branch="$PAGES_BRANCH" --commit-hash="$HEAD_SHA" --commit-dirty=true | tee deploy.log
+          set +o pipefail
           # The project's pages.dev subdomain can differ from its name (a
           # suffix is added when the name is taken), so use what wrangler printed.
           url=$(grep -oE 'Deployment alias URL: https://[^ ]+' deploy.log | awk '{print $NF}' | tail -1)
