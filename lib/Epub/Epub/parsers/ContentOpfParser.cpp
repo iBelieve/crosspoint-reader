@@ -325,8 +325,17 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
       }
     }
 
+    // An id or href over the cached-string limit could not be read back; such an
+    // item is left out, so a spine itemref naming it is not found.
+    const bool storable =
+        itemId.size() <= serialization::MAX_STRING_BYTES && href.size() <= serialization::MAX_STRING_BYTES;
+    if (!storable) {
+      LOG_ERR("COF", "Skipping manifest item with an id or href over %u bytes",
+              static_cast<unsigned>(serialization::MAX_STRING_BYTES));
+    }
+
     // Record index entry for fast lookup later
-    if (self->tempItemStore) {
+    if (self->tempItemStore && storable) {
       ItemIndexEntry entry;
       entry.idHash = fnvHash(itemId);
       entry.idLen = static_cast<uint16_t>(itemId.size());
@@ -334,7 +343,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
       self->itemIndex.push_back(entry);
     }
 
-    if (self->tempItemStore) {
+    if (self->tempItemStore && storable) {
       serialization::writeString(self->tempItemStore, itemId);
       serialization::writeString(self->tempItemStore, href);
     }

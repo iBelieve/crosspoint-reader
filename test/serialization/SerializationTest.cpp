@@ -136,3 +136,10 @@ TEST(WriteString, CappedStringsReadBackFromEveryWriter) {
   EXPECT_EQ(s, tooLong.substr(0, MAX_STRING_BYTES));
   EXPECT_EQ(file.available(), 0);
 }
+
+TEST(WriteString, CutsAtAUtf8Boundary) {
+  // "é" is two bytes and straddles the limit, so the cut drops it whole.
+  const std::string s = std::string(MAX_STRING_BYTES - 1, 'a') + "\xC3\xA9" + "tail";
+  EXPECT_EQ(serialization::cappedStringLength(s), MAX_STRING_BYTES - 1);
+  EXPECT_EQ(encoded(s), encoded(std::string(MAX_STRING_BYTES - 1, 'a')));
+}

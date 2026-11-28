@@ -263,8 +263,11 @@ bool ZipFile::loadZipDetails() {
     return false;
   }
 
-  file.seek(fileSize - scanRange);
-  file.read(buffer, scanRange);
+  if (!file.seek(fileSize - scanRange) || file.read(buffer, scanRange) != scanRange) {
+    LOG_ERR("ZIP", "Failed to read the EOCD scan range");
+    free(buffer);
+    return false;
+  }
 
   // Scan backwards for the signature
   int foundOffset = -1;

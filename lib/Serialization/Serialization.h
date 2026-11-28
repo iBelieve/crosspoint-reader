@@ -36,14 +36,18 @@ bool tryReadPod(HalFile& file, T& value) {
   return file.read(reinterpret_cast<uint8_t*>(&value), sizeof(T)) == sizeof(T);
 }
 
-// writeString() stores at most MAX_STRING_BYTES, so every string it writes can
-// be read back with tryReadString(..., MAX_STRING_BYTES). The cap keeps a
-// corrupt length from asking for a huge allocation; no cached EPUB string
-// (href, anchor, id, title, ruby text) is near it.
+// Cached strings are read with tryReadString(..., MAX_STRING_BYTES), so a
+// corrupt length cannot ask for a huge allocation. Callers that look strings
+// up by key skip longer ones; writeString() cuts any other longer string at a
+// UTF-8 boundary so everything it writes reads back.
 constexpr size_t MAX_STRING_BYTES = 4096;
 
 inline uint32_t cappedStringLength(const std::string& s) {
-  return static_cast<uint32_t>(std::min(s.size(), MAX_STRING_BYTES));
+  if (s.size() <= MAX_STRING_BYTES) return static_cast<uint32_t>(s.size());
+  size_t len = MAX_STRING_BYTES;
+  // Back off continuation bytes (10xxxxxx) so the cut lands before a lead byte.
+  while (len > 0 && (static_cast<uint8_t>(s[len]) & 0xC0) == 0x80) len--;
+  return static_cast<uint32_t>(len);
 }
 
 inline void writeString(std::ostream& os, const std::string& s) {
