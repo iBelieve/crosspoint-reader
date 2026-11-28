@@ -3,6 +3,7 @@
 // runs `wrangler preview --name pr-<n>` for pull requests and `wrangler deploy`
 // for develop.
 {
+  // Also WORKER_NAME in .github/workflows/web-preview.yml.
   "name": "crosspoint-sim",
   "compatibility_date": "2026-11-13",
   "assets": {
