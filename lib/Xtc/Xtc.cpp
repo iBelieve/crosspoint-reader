@@ -323,17 +323,29 @@ bool Xtc::generateThumbBmp(int height) const {
     // Copy cover.bmp to thumb.bmp
     if (generateCoverBmp()) {
       HalFile src, dst;
+      const std::string thumbPath = getThumbBmpPath(height);
+      bool copyOk = false;
       if (Storage.openFileForRead("XTC", getCoverBmpPath(), src)) {
-        if (Storage.openFileForWrite("XTC", getThumbBmpPath(height), dst)) {
+        if (Storage.openFileForWrite("XTC", thumbPath, dst)) {
+          copyOk = true;
           uint8_t buffer[512];
-          while (src.available()) {
-            size_t bytesRead = src.read(buffer, sizeof(buffer));
-            dst.write(buffer, bytesRead);
+          while (copyOk && src.available()) {
+            // read() returns -1 on an SD error.
+            const int bytesRead = src.read(buffer, sizeof(buffer));
+            copyOk =
+                bytesRead > 0 && dst.write(buffer, static_cast<size_t>(bytesRead)) == static_cast<size_t>(bytesRead);
           }
+          dst.close();
+          // A partial thumbnail would be reused on every later call.
+          if (!copyOk) Storage.remove(thumbPath.c_str());
         }
       }
+      if (!copyOk) {
+        LOG_ERR("XTC", "Failed to copy cover to thumb");
+        return false;
+      }
       LOG_DBG("XTC", "Copied cover to thumb (no scaling needed)");
-      return Storage.exists(getThumbBmpPath(height).c_str());
+      return true;
     }
     return false;
   }
