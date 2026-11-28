@@ -261,6 +261,39 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build/test --output-on-failure -j
 
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Lint Python
+        run: uvx ruff@0.16.9 check --output-format=github .
+
+      - name: Check Python formatting
+        run: uvx ruff@0.16.9 format --check --diff .
+
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install lint tools
+        run: npm ci
+
+      - name: Lint JavaScript
+        run: npx eslint .
+
   # This job is used as the PR required actions check, allows for changes to other steps in the future without breaking
   # PR requirements.
   test-status:
@@ -269,6 +302,8 @@ jobs:
       - build
       - clang-format
       - cppcheck
+      - eslint
+      - ruff
       - unit-tests
     if: always()
     runs-on: ubuntu-latest

@@ -17,16 +17,14 @@ absent (the SIMD path is an ESP32-S3-only optimization; C61 does not use it).
 Idempotent: if the guard is already present, the file is left untouched.
 """
 
-Import("env")  # noqa: F821 (SCons-injected global)
 from pathlib import Path
 from shutil import copymode
 from tempfile import NamedTemporaryFile
 
+Import("env")
+
 RAW_INCLUDE = '#include "dsps_fft2r_platform.h"'
-GUARDED_INCLUDE = (
-    '#if __has_include("dsps_fft2r_platform.h")\n'
-    '#include "dsps_fft2r_platform.h"'
-)
+GUARDED_INCLUDE = '#if __has_include("dsps_fft2r_platform.h")\n#include "dsps_fft2r_platform.h"'
 # Matching #endif is appended after the existing include-guarded block. The
 # upstream file already closes its `#ifdef ARDUINO_ARCH_ESP32` with an #endif;
 # we only need to balance the __has_include we introduce, so we append one
@@ -43,7 +41,7 @@ def patch_pngdec(env):
 
 
 def _patch_one(path):
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         text = f.read()
 
     if "__has_include" in text:
@@ -68,7 +66,8 @@ def _patch_one(path):
         text = text.rstrip() + "\n#endif // __has_include dsps_fft2r_platform.h\n"
 
     # Replace the file so interrupted writes and hard links cannot damage another copy.
-    temporary = NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, suffix=".tmp", delete=False)
+    # Entered below, after its path is saved for cleanup.
+    temporary = NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, suffix=".tmp", delete=False)  # noqa: SIM115
     temporary_path = Path(temporary.name)
     try:
         with temporary:
@@ -77,7 +76,7 @@ def _patch_one(path):
         temporary_path.replace(path)
     finally:
         temporary_path.unlink(missing_ok=True)
-    print("Guarded PNGdec S3 SIMD include: %s" % path)
+    print(f"Guarded PNGdec S3 SIMD include: {path}")
 
 
-patch_pngdec(env)  # noqa: F821
+patch_pngdec(env)

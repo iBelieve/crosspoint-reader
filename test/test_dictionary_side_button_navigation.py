@@ -3,15 +3,16 @@
 Run: python3 test/test_dictionary_side_button_navigation.py (requires a C++20 compiler).
 """
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 mapped_input_source = (ROOT / "src/MappedInputManager.cpp").read_text()
 mapping = mapped_input_source[
-    mapped_input_source.index("bool MappedInputManager::isNavDirectionSwapped()"):
-    mapped_input_source.index("namespace {", mapped_input_source.index("bool MappedInputManager::mapButton("))
+    mapped_input_source.index("bool MappedInputManager::isNavDirectionSwapped()") : mapped_input_source.index(
+        "namespace {", mapped_input_source.index("bool MappedInputManager::mapButton(")
+    )
 ]
 viewer = (ROOT / "src/activities/reader/DictionaryDefinitionActivity.cpp").read_text()
 loop_start = viewer.index("void DictionaryDefinitionActivity::loop()")
@@ -19,7 +20,7 @@ nav_start = viewer.index("  const auto frontButtons =", loop_start)
 nav_end = viewer.index("\n}\n", nav_start)
 navigation = viewer[nav_start:nav_end]
 reader = (ROOT / "src/activities/reader/ReaderUtils.h").read_text()
-front_buttons = reader[reader.index("struct FrontPageTurnButtons"):reader.index("struct PageTurnResult")]
+front_buttons = reader[reader.index("struct FrontPageTurnButtons") : reader.index("struct PageTurnResult")]
 
 gpio_stub = r"""
 #pragma once
@@ -41,7 +42,8 @@ struct HalGPIO {
 };
 """
 
-harness = r"""
+harness = (
+    r"""
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -68,9 +70,13 @@ struct CrossPointSettings {
 static unsigned long clockMs = 1000;
 unsigned long millis() { return clockMs; }
 
-""" + mapping + r"""
+"""
+    + mapping
+    + r"""
 namespace ReaderUtils {
-""" + front_buttons + r"""
+"""
+    + front_buttons
+    + r"""
 }
 bool MappedInputManager::wasPressed(Button button) const { return mapButton(button, &HalGPIO::wasPressed); }
 bool MappedInputManager::wasReleased(Button button) const { return mapButton(button, &HalGPIO::wasReleased); }
@@ -92,7 +98,9 @@ struct DictionaryProbe {
   void requestUpdate() { ++updates; }
   void navigate() {
     auto currentPage = std::atomic_ref(content.currentPage);
-""" + navigation + r"""
+"""
+    + navigation
+    + r"""
   }
 };
 
@@ -195,16 +203,26 @@ int main() {
   assert(checks == 1120);
 }
 """
+)
 
 with tempfile.TemporaryDirectory() as directory:
     tmp = Path(directory)
     (tmp / "HalGPIO.h").write_text(gpio_stub)
     (tmp / "dictionary_buttons.cpp").write_text(harness)
     subprocess.run(
-        ["c++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
-         "-I" + directory, "-I" + str(ROOT / "src"),
-         str(tmp / "dictionary_buttons.cpp"), str(ROOT / "src/util/ButtonNavigator.cpp"),
-         "-o", str(tmp / "dictionary_buttons")],
+        [
+            "c++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I" + directory,
+            "-I" + str(ROOT / "src"),
+            str(tmp / "dictionary_buttons.cpp"),
+            str(ROOT / "src/util/ButtonNavigator.cpp"),
+            "-o",
+            str(tmp / "dictionary_buttons"),
+        ],
         check=True,
     )
     subprocess.run([str(tmp / "dictionary_buttons")], check=True)

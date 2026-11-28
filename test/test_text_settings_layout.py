@@ -1,9 +1,9 @@
 """Run with python3 test/test_text_settings_layout.py (requires a host C++ compiler)."""
 
-from pathlib import Path
 import re
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 activity = (ROOT / "src/activities/settings/TextSettingsActivity.cpp").read_text()
@@ -34,9 +34,7 @@ rows = "  fui::ListProps props;" + build.split("  fui::ListProps props;", 1)[1]
 rows = rows.split("\nconst char* TextSettingsActivity::confirmLabelText", 1)[0]
 build = build.split("\n  // rowItems_", 1)[0]
 sync = lists.split("void UiListActivity::syncListViewport(", 1)[1]
-sync = "void TextSettingsActivity::syncListViewport(" + sync.split(
-    "\nvoid UiListActivity::drawChrome", 1
-)[0]
+sync = "void TextSettingsActivity::syncListViewport(" + sync.split("\nvoid UiListActivity::drawChrome", 1)[0]
 tab_bar = tabs.split("void UiTabListActivity::buildTabBar(UiScreen& screen) {", 1)[1]
 chrome = activity.split("void TextSettingsActivity::drawChrome() {", 1)[1]
 chrome = chrome.split("\nvoid TextSettingsActivity::drawFooter()", 1)[0]
@@ -51,7 +49,8 @@ preview_caption = preview_caption.replace(
 orientation = (ROOT / "lib/GfxRenderer/GfxRenderer.h").read_text()
 orientation = "enum Orientation {" + orientation.split("enum Orientation {", 1)[1].split("\n  };", 1)[0] + "\n  };"
 
-harness = r"""
+harness = (
+    r"""
 #include <FreeInkApp.h>
 #include <BoardConfig.h>
 #include <EpdFont.h>
@@ -68,7 +67,9 @@ harness = r"""
 namespace fui = freeink::ui;
 using UiScreen = fui::Screen<32>;
 struct GfxRenderer {
-""" + orientation + r"""
+"""
+    + orientation
+    + r"""
   Orientation orientation = Portrait;
   int panelWidth = 800, panelHeight = 480;
   Rect header{};
@@ -102,11 +103,15 @@ struct UITheme {
 #define GUI UITheme::getInstance()
 #define tr(id) id
 constexpr const char* STR_TEXT_SETTINGS = "Text Settings";
-constexpr const char* STR_PREVIEW = """ + english.split("STR_PREVIEW: ", 1)[1].splitlines()[0] + r""";
+constexpr const char* STR_PREVIEW = """
+    + english.split("STR_PREVIEW: ", 1)[1].splitlines()[0]
+    + r""";
 constexpr int UI_10_FONT_ID = 0, TOUCH_TAB_BAR_HEIGHT = 50, ACTION_TAB = 1, ACTION_ROW = 2;
 namespace textsettings {
   struct PreviewLayout {};
-""" + preview_caption + r"""
+"""
+    + preview_caption
+    + r"""
 }
 struct UiTabListActivity {
   struct { bool touch = false; bool hasTouch() const { return touch; } } mappedInput;
@@ -141,27 +146,33 @@ struct TextSettingsActivity : UiTabListActivity {
     syncListViewport(screen, props, 1);
   }
   void enterGeometry() {
-    metrics_ =""" + enter + r"""
+    metrics_ ="""
+    + enter
+    + r"""
   }
-  void buildScreen(UiScreen& screen) {""" + build + r"""
+  void buildScreen(UiScreen& screen) {"""
+    + build
+    + r"""
   }
-  void buildRows(UiScreen& screen) {""" + rows + r"""
-  void drawChrome() {""" + chrome + r"""
+  void buildRows(UiScreen& screen) {"""
+    + rows
+    + r"""
+  void drawChrome() {"""
+    + chrome
+    + r"""
 };
-""" + sync + method(
-    renderer, "int GfxRenderer::getScreenWidth() const"
-) + method(
-    renderer, "int GfxRenderer::getScreenHeight() const"
-) + method(
-    renderer, "void GfxRenderer::getOrientedViewableTRBL("
-) + method(
-    theme, "Rect UITheme::getContentArea("
-) + method(
-    theme, "Rect UITheme::getScreenSafeArea("
-) + method(
-    theme, "Rect UITheme::getHeaderRect("
-) + r"""
-void UiTabListActivity::buildTabBar(UiScreen& screen) {""" + tab_bar + r"""
+"""
+    + sync
+    + method(renderer, "int GfxRenderer::getScreenWidth() const")
+    + method(renderer, "int GfxRenderer::getScreenHeight() const")
+    + method(renderer, "void GfxRenderer::getOrientedViewableTRBL(")
+    + method(theme, "Rect UITheme::getContentArea(")
+    + method(theme, "Rect UITheme::getScreenSafeArea(")
+    + method(theme, "Rect UITheme::getHeaderRect(")
+    + r"""
+void UiTabListActivity::buildTabBar(UiScreen& screen) {"""
+    + tab_bar
+    + r"""
 namespace freeink::ui {
 struct GfxRendererTarget : DrawTarget { static constexpr FontId FONT_BODY = 1; };
 }
@@ -196,7 +207,9 @@ struct Target : fui::GfxRendererTarget {
   }
   void bitmap(fui::Rect, fui::BitmapRef, fui::BitmapMode, fui::Paint, fui::Rotation) override {}
 };
-""" + method(tokens, "inline freeink::ui::ThemeTokens uiThemeTokens(") + r"""
+"""
+    + method(tokens, "inline freeink::ui::ThemeTokens uiThemeTokens(")
+    + r"""
 void checkLayout(const BoardConfig::BoardProfile& profile, GfxRenderer::Orientation orientation,
                  ThemeMetrics metrics, TextSettingsActivity::Tab tab) {
   BoardConfig::ACTIVE = profile;
@@ -301,7 +314,9 @@ void checkStyleRowsFit(const BoardConfig::BoardProfile& profile, GfxRenderer::Or
   activity.renderer.panelHeight = profile.displayHeight;
   activity.renderer.orientation = orientation;
   activity.enterGeometry();
-  const char* labels[] = {""" + style_labels + r"""};
+  const char* labels[] = {"""
+    + style_labels
+    + r"""};
   for (const char* label : labels) {
     fui::ListItem row;
     row.label = label;
@@ -406,20 +421,38 @@ int main() {
   checkSharedPartialRows();
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "layout.cpp"
     executable = Path(directory) / "layout"
     cpp.write_text(harness)
-    subprocess.run([
-        "c++", "-std=c++17", "-DFREEINK_DEVICE_X3=1", "-DFREEINK_DEVICE_X4=1",
-        "-DFREEINK_CAP_TOUCH=1", "-I", str(ROOT / "src"),
-        "-I", str(ROOT / "freeink-sdk/libs/hardware/XteinkDetect/test/host/stubs"),
-        "-I", str(ROOT / "freeink-sdk/libs/hardware/BoardConfig/include"), "-I",
-        str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"),
-        "-I", str(ROOT / "lib/EpdFont"), "-I", str(ROOT / "lib/Utf8"),
-        str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/src/FreeInkUI.cpp"),
-        str(ROOT / "lib/EpdFont/EpdFont.cpp"), str(ROOT / "lib/Utf8/Utf8.cpp"),
-        str(cpp), "-o", str(executable),
-    ], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++17",
+            "-DFREEINK_DEVICE_X3=1",
+            "-DFREEINK_DEVICE_X4=1",
+            "-DFREEINK_CAP_TOUCH=1",
+            "-I",
+            str(ROOT / "src"),
+            "-I",
+            str(ROOT / "freeink-sdk/libs/hardware/XteinkDetect/test/host/stubs"),
+            "-I",
+            str(ROOT / "freeink-sdk/libs/hardware/BoardConfig/include"),
+            "-I",
+            str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"),
+            "-I",
+            str(ROOT / "lib/EpdFont"),
+            "-I",
+            str(ROOT / "lib/Utf8"),
+            str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/src/FreeInkUI.cpp"),
+            str(ROOT / "lib/EpdFont/EpdFont.cpp"),
+            str(ROOT / "lib/Utf8/Utf8.cpp"),
+            str(cpp),
+            "-o",
+            str(executable),
+        ],
+        check=True,
+    )
     subprocess.run([str(executable)], check=True)
 print("Text Settings layout regression checks passed")

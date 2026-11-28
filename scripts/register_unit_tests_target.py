@@ -9,13 +9,13 @@ host build, not a firmware build).
 
 import os
 
-Import("env")  # noqa: F821  -- provided by PlatformIO at script load
+Import("env")
 
-PROJECT_DIR = env["PROJECT_DIR"]  # noqa: F821
+PROJECT_DIR = env["PROJECT_DIR"]
 BUILD_DIR = os.path.join(PROJECT_DIR, "build", "test")
 TEST_SRC_DIR = os.path.join(PROJECT_DIR, "test")
 
-env.AddCustomTarget(  # noqa: F821
+env.AddCustomTarget(
     name="unit-tests",
     dependencies=None,
     actions=[

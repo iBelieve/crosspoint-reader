@@ -15,8 +15,18 @@ import sys
 import unicodedata
 from pathlib import Path
 
-SCRIPTS = ["devanagari", "bengali", "gurmukhi", "gujarati", "oriya", "tamil", "telugu", "kannada", "malayalam",
-           "sinhala"]
+SCRIPTS = [
+    "devanagari",
+    "bengali",
+    "gurmukhi",
+    "gujarati",
+    "oriya",
+    "tamil",
+    "telugu",
+    "kannada",
+    "malayalam",
+    "sinhala",
+]
 ZWJ, ZWNJ = "‍", "‌"
 VIRAMA = {"sinhala": "්"}
 
@@ -32,13 +42,25 @@ def main():
     rng = random.Random(1757)
     for i, name in enumerate(SCRIPTS):
         chars = block(i)
-        consonants = [c for c in chars if unicodedata.category(c) == "Lo" and "LETTER" in unicodedata.name(c, "")
-                      and not any(v in unicodedata.name(c) for v in (" A", " AA", " I", " II", " U", " UU", " E",
-                                                                      " AI", " O", " AU", " VOCALIC"))]
+        consonants = [
+            c
+            for c in chars
+            if unicodedata.category(c) == "Lo"
+            and "LETTER" in unicodedata.name(c, "")
+            and not any(
+                v in unicodedata.name(c)
+                for v in (" A", " AA", " I", " II", " U", " UU", " E", " AI", " O", " AU", " VOCALIC")
+            )
+        ]
         vowels = [c for c in chars if unicodedata.category(c) == "Lo" and c not in consonants]
         signs = [c for c in chars if unicodedata.category(c) in ("Mn", "Mc")]
-        virama = VIRAMA.get(name) or next(c for c in signs if "VIRAMA" in unicodedata.name(c) or
-                                          "SIGN HALANTA" in unicodedata.name(c) or "PULLI" in unicodedata.name(c))
+        virama = VIRAMA.get(name) or next(
+            c
+            for c in signs
+            if "VIRAMA" in unicodedata.name(c)
+            or "SIGN HALANTA" in unicodedata.name(c)
+            or "PULLI" in unicodedata.name(c)
+        )
         prebase = [c for c in signs if "VOWEL SIGN" in unicodedata.name(c)]
         ra = next((c for c in consonants if unicodedata.name(c).endswith("LETTER RA")), consonants[0])
         common = consonants[:12]
@@ -48,7 +70,7 @@ def main():
         lines.update(v + s for v in vowels for s in signs)
         lines.update(a + virama + b for a in consonants for b in consonants)
         lines.update(a + virama + b + s for a in common for b in consonants for s in prebase[:6])
-        lines.update(ra + virama + c + s for c in consonants for s in [""] + signs)
+        lines.update(ra + virama + c + s for c in consonants for s in ["", *signs])
         lines.update(ra + virama + ZWJ + c for c in consonants)
         lines.update(a + virama + ZWJ + b for a in common for b in consonants)
         lines.update(a + virama + ZWNJ + b for a in common for b in consonants)
@@ -58,7 +80,7 @@ def main():
         lines.update(c + virama for c in consonants)
         lines.update(c + virama + ZWJ for c in consonants)
         lines.update(c + virama + ZWNJ for c in consonants)
-        pool = chars + [ZWJ, ZWNJ, "◌", "।"]
+        pool = [*chars, ZWJ, ZWNJ, "◌", "।"]
         for _ in range(4000):
             lines.add("".join(rng.choice(pool) for _ in range(rng.randint(2, 7))))
         (out / f"{name}.txt").write_text("\n".join(sorted(lines)) + "\n", encoding="utf-8")

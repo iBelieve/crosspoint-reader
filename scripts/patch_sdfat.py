@@ -20,21 +20,29 @@ files are left untouched so incremental builds do not recompile SdFat.
 
 import hashlib
 import os
-from pathlib import Path
 import subprocess
-
+from pathlib import Path
 
 # Reviewed upstream and patched bytes. A dependency upgrade requires re-review.
 PATCHES = (
-    ("0001-invalidate-failed-cache-fill.patch", "src/common/FsCache.cpp",
-     "ba4f99dd660c7c6a747b20abcf11354379aa689115d1ee1ad1cf9577706a67bb",
-     "f46a551f97c674ab00c9c25385af7c370a776725f17e14502fcc357858f583da"),
-    ("0002-allow-separate-fat-cache-override.patch", "src/SdFatConfig.h",
-     "7889975cad262158e1623c873730210c41c55c2198830d668952b82e588ff7cc",
-     "32104db82acc857b70c7fe20740afbffa9f7dee0a7c685c106febfa989fdbe77"),
-    ("0003-sync-fat-before-data-cache.patch", "src/FatLib/FatPartition.h",
-     "fb91c81beac2779a0d4b08e886a5fefdf8062b8ad422ccec4e178ae4e88b72e5",
-     "10d66a5d2424ed9c6919a9dc65305ebd5854170bdeea29f4b7c70f57bee929af"),
+    (
+        "0001-invalidate-failed-cache-fill.patch",
+        "src/common/FsCache.cpp",
+        "ba4f99dd660c7c6a747b20abcf11354379aa689115d1ee1ad1cf9577706a67bb",
+        "f46a551f97c674ab00c9c25385af7c370a776725f17e14502fcc357858f583da",
+    ),
+    (
+        "0002-allow-separate-fat-cache-override.patch",
+        "src/SdFatConfig.h",
+        "7889975cad262158e1623c873730210c41c55c2198830d668952b82e588ff7cc",
+        "32104db82acc857b70c7fe20740afbffa9f7dee0a7c685c106febfa989fdbe77",
+    ),
+    (
+        "0003-sync-fat-before-data-cache.patch",
+        "src/FatLib/FatPartition.h",
+        "fb91c81beac2779a0d4b08e886a5fefdf8062b8ad422ccec4e178ae4e88b72e5",
+        "10d66a5d2424ed9c6919a9dc65305ebd5854170bdeea29f4b7c70f57bee929af",
+    ),
 )
 
 
@@ -67,8 +75,9 @@ def apply_patches(project_dir, dependency_dir):
 
     # Archive dependencies must not discover the enclosing application Git repo.
     process_env = {key: os.environ[key] for key in ("HOME", "PATH", "TMPDIR", "LANG") if key in os.environ}
-    process_env.update(GIT_CEILING_DIRECTORIES=str(dependency.parent),
-                       GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
+    process_env.update(
+        GIT_CEILING_DIRECTORIES=str(dependency.parent), GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1"
+    )
     pending = []
     for name, relative, upstream, patched in PATCHES:
         target = dependency / relative
@@ -80,8 +89,9 @@ def apply_patches(project_dir, dependency_dir):
         command = ["git", "apply", "--check"]
         if current == patched:
             command.append("--reverse")
-        result = subprocess.run(command + [str(patch)], cwd=dependency,
-                                env=process_env, capture_output=True, text=True)
+        result = subprocess.run(
+            [*command, str(patch)], cwd=dependency, env=process_env, capture_output=True, text=True, check=False
+        )
         if result.returncode:
             raise RuntimeError("SdFat patch does not apply: " + name + "\n" + result.stderr)
         if current == upstream:
@@ -98,8 +108,7 @@ def patch_selected_dependency(env):
     if env.get("ARDUINO_LIB_COMPILE_FLAG") == "Build":
         return
     # A post: script sees the resolved library builders on the first build too.
-    selected = [builder for builder in env.GetLibBuilders()
-                if builder.name == "SdFat" and builder.is_dependent]
+    selected = [builder for builder in env.GetLibBuilders() if builder.name == "SdFat" and builder.is_dependent]
     if len(selected) != 1:
         raise RuntimeError("Expected exactly one selected SdFat dependency")
     dependency = Path(selected[0].path).resolve()
@@ -110,5 +119,5 @@ def patch_selected_dependency(env):
 
 
 if "Import" in globals():
-    Import("env")  # noqa: F821 -- supplied by SCons
-    patch_selected_dependency(env)  # noqa: F821
+    Import("env")
+    patch_selected_dependency(env)

@@ -2,9 +2,9 @@
 
 import hashlib
 import importlib.util
-from pathlib import Path
 import re
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("machines", ROOT / "scripts/gen_ot_shaper_machines.py")
@@ -48,13 +48,15 @@ class MachineStateOrderTest(unittest.TestCase):
                         self.assertEqual(table[mapping[state]][cls], expected, (state, cls))
                 flat = [255 if value == -1 else value for row in table for value in row]
                 self.assertEqual(header_array(header, name + "_TRANSITIONS"), flat)
-                self.assertEqual(header_array(header, name + "_ACCEPT"),
-                                 [255 if value is None else value for value in renamed_accept])
-                self.assertEqual(header_array(header, name + "_CLASSES"),
-                                 [classes.get(cat, 0) for cat in range(64)])
+                self.assertEqual(
+                    header_array(header, name + "_ACCEPT"),
+                    [255 if value is None else value for value in renamed_accept],
+                )
+                self.assertEqual(header_array(header, name + "_CLASSES"), [classes.get(cat, 0) for cat in range(64)])
                 self.assertEqual(hashlib.sha256(bytes(flat)).hexdigest(), TRANSITION_HASHES[name])
-                self.assertEqual(machines.order_scanner_states(name, original, accept),
-                                 (mapping, table, renamed_accept))
+                self.assertEqual(
+                    machines.order_scanner_states(name, original, accept), (mapping, table, renamed_accept)
+                )
 
 
 if __name__ == "__main__":
