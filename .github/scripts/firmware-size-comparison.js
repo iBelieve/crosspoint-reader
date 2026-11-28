@@ -47,7 +47,7 @@ async function comparison({github, context, core, run, pullRequest, builds}) {
         }));
       }
       const artifact = artifactCache.get(buildRun.id).find(a => a.name === `firmware-stats-${environment}`);
-      if (!artifact) return {reason: 'measurement missing (build may have failed)'};
+      if (!artifact) return {reason: 'measurement missing (build may have failed)', missing: true};
       if (artifact.expired) return {reason: 'measurement expired'};
       if (artifact.size_in_bytes > 65536) return {reason: 'invalid measurement'};
       const {data} = await github.rest.actions.downloadArtifact({...api, artifact_id: artifact.id, archive_format: 'zip'});
@@ -100,7 +100,10 @@ async function comparison({github, context, core, run, pullRequest, builds}) {
         baselineLink = ` <br>[CI run](${candidate.html_url})`;
         break;
       }
-      if (base.reason === baselineReason) base = result;
+      // develop builds only x4c, so other boards' missing baselines are not failures.
+      if (base.reason === baselineReason) {
+        base = result.missing && build.env !== 'x4c' ? {reason: 'develop does not build this board'} : result;
+      }
     }
     const image = cells(base.stats, head.stats, 'image');
     const flash = cells(base.stats, head.stats, 'flash');

@@ -82,18 +82,31 @@ with a one-line reason, and list those hand edits in the PR. Paths below are fro
   owner). Upstream's "Human ownership" and "Mandatory firmware handoff"
   sections stay deleted. The same applies to the fork edits in
   `.agents/README.md`, `.agents/rules/testing-debugging.md`,
-  `.agents/rules/ui-activities.md`, `README.md` (scope links), `ROADMAP.md`
+  `.agents/rules/ui-activities.md`, the AGENTS.md intro paragraph (x4c memory
+  target), `.agents/rules/hardware-resources.md` (memory facts, "Resource
+  target", x4c size comparison), `.agents/rules/architecture-hal.md`
+  (framebuffer line), `.github/workflows/ci.yml` (x4c-only build matrix,
+  `all-boards` label, concurrency, x4c cppcheck),
+  `.github/scripts/pr-firmware-comment.js` and `firmware-size-comparison.js`
+  (built-board list, cancelled and superseded runs, missing-baseline wording),
+  `test/firmware_comment.test.js` (tests for those), `README.md` (scope links, x4c
+  pre-PR and flash commands), `docs/contributing/` (x4c commands, CI coverage in
+  `touch-and-ui.md`, x4c target in `architecture.md`), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
 - **Fork jobs in `.github/workflows/ci.yml`:** keep the `ruff` and `eslint`
-  jobs and their entries under the Test Status job's `needs:`. Take upstream's
-  other changes to the workflow.
+  jobs and their entries under the Test Status job's `needs:`, and the fork
+  edits listed above (x4c-only build matrix, `all-boards` label, concurrency,
+  x4c cppcheck). Take upstream's other changes to the workflow.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
   upstream's version, but adapt or drop any upstream policy wording in it
   (human approval for commits, no agent PRs, interactive apps out of scope).
 - **Merge method:** a sync PR must land as a merge commit, not a squash, so
   git records the upstream parent. If the repository allows only squash
   merges, the owner merges the sync locally and pushes it.
+
+When upstream adds a release board, add it to the `all-boards` list in
+`ci.yml` and to `allBuilds` in `pr-firmware-comment.js`.
 
 If you edit another file for fork policy, add it to this list. Then run the
 full verification list.

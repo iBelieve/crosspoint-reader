@@ -21,8 +21,8 @@ is an environment issue, not a completed firmware build.
 ### Code Quality
 
 Use `./bin/clang-format-fix` on every host (`-g` covers only unstaged edits), including formatter diagnostics;
-never invoke or probe raw `clang-format`. Run `pio check` on every C/C++
-change. The full required list is in
+never invoke or probe raw `clang-format`. Run `pio check -e x4c` on every
+C/C++ change. The full required list is in
 [Verification is not optional](../../AGENTS.md#verification-is-not-optional);
 `.github/workflows/ci.yml` is the list of record for linters and test jobs.
 New warnings and findings are fixed, not left for later.
@@ -45,7 +45,9 @@ alter firmware output/build. Check ignored outputs before staging, using the
 Device checks in the PR test plan cover changed behavior, relevant orientations/remapping,
 and resource/cache effects. Changed input, display, or layout paths cover all
 four orientations: portrait, inverted, landscape CW, and landscape CCW.
-C3 baseline target: more than 50 KB free and no leaks;
+Measure on `x4c`, and on each other release board that still compiles the
+change (including the C3 when it compiles the change), or give a labeled estimate for boards you cannot
+measure. An `x4c` reading alone does not show C3 or OnePage fit. Target: more than 50 KB free internal heap and no leaks;
 measure internal/PSRAM heaps and largest blocks separately across relevant repeated
 book, dictionary, font, or WiFi transitions. Free bytes alone do not prove an
 allocation will fit. For layout changes, back up progress and verify affected
@@ -73,6 +75,17 @@ Inspect current matrices under `.github/workflows/` before claiming board
 coverage. Preserve pinned core/packages and patches. Release/RC board-specific
 asset naming must agree with OTA discovery. Fix CI failures on your PR before
 calling it ready.
+
+CI builds only `x4c` (X4 Classic) by default. To build every board, add the
+`all-boards` label to the PR; it stays in effect for later pushes. Do this for
+changes to shared board code, the HAL, the SDK pin, or `platformio.ini`; for
+code that x4c does not compile (other `FREEINK_DEVICE_*` blocks, or
+capabilities x4c lacks such as `FREEINK_CAP_TOUCH`); for features gated out of
+some boards or shared code that grows static RAM; and for work meant for
+upstream. The required Test Status check shows the latest run to finish, so
+before merging, wait for the labeled run's Test Status and check that the PR's
+firmware comment lists every board. cppcheck covers only `x4c` either way.
+Releases still build every board.
 
 ### Serial Monitor Options
 

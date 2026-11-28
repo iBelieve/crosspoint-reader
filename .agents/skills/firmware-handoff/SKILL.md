@@ -21,7 +21,7 @@ the commit; never revert it. Self-review against the four review checklists belo
 ## 2. Run every check
 
 Run the [verification list](../../../AGENTS.md#verification-is-not-optional):
-format, host tests, `pio check`, firmware builds for affected boards, and any
+format, host tests, `pio check -e x4c`, firmware builds for affected boards, and any
 other job in `.github/workflows/ci.yml`. Follow the
 [testing rule](../../rules/testing-debugging.md) for build logs.
 

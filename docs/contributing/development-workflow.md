@@ -20,8 +20,8 @@ This page defines the expected local workflow before opening a pull request.
 
 ```sh
 ./bin/clang-format-fix
-pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
-pio run
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+pio run -e x4c
 ```
 
 CI enforces formatting, static analysis, and build checks.

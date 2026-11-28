@@ -193,7 +193,7 @@ nix develop -f nix
 nix-shell nix
 ```
 
-To flash a connected ESP32-C3 device, enable PlatformIO's udev rules in your NixOS configuration:
+To flash a connected device, enable PlatformIO's udev rules in your NixOS configuration:
 
 ```nix
 services.udev.packages = with pkgs; [ platformio-core.udev ];
@@ -204,15 +204,15 @@ After rebuilding the system configuration, reconnect the device or reload udev r
 ### Build / flash / monitor
 
 ```bash
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 ### Contributor pre-PR checks
 
 ```bash
 ./bin/clang-format-fix
-pio check -e default
-pio run -e default
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+pio run -e x4c
 ```
 
 ### Debugging

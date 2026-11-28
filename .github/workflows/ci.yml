@@ -4,6 +4,18 @@ on:
   push:
     branches: [develop]
   pull_request:
+    # `labeled` lets the all-boards label start a run without a new push.
+    # Adding any label, even on a closed PR, starts a full run. Removing a
+    # label starts none, and re-runs reuse the original labels.
+    types: [opened, synchronize, reopened, labeled]
+
+# A new push to a PR cancels its run in progress. Other events queue behind
+# it instead, since cancelling fails Test Status on that SHA; a newer queued
+# run replaces an older queued one. Re-runs get their own group so a re-run of
+# an old commit cannot replace the current head's queued run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}${{ github.run_attempt > 1 && format('-rerun-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' && github.run_attempt == 1 }}
 
 permissions:
   contents: read
@@ -65,8 +77,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-v2-${{ runner.os }}-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
-          restore-keys: pio-v2-${{ runner.os }}-
+          key: pio-v3-${{ runner.os }}-cppcheck-x4c-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
+          restore-keys: pio-v3-${{ runner.os }}-cppcheck-x4c-
 
       - name: Install cppcheck runtime dependency
         run: |
@@ -84,7 +96,7 @@ jobs:
           fi
 
       - name: Run cppcheck
-        run: pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+        run: pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
 
   build:
     name: Build ${{ matrix.env }}
@@ -92,27 +104,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Short board-specific names keep pull-request artifacts easy to identify.
-        # The release workflow applies the published crosspoint-<version>-<device>.bin names.
-        include:
-          - env: default
-            asset: firmware.bin
-          - env: sticky
-            asset: firmware-sticky.bin
-          - env: x4pro
-            asset: firmware-x4pro.bin
-          - env: x4c
-            asset: firmware-x4c.bin
-          - env: papermono
-            asset: firmware-papermono.bin
-          - env: metalio_eink4
-            asset: firmware-metalio_eink4.bin
-          - env: eego_a4
-            asset: firmware-eego_a4.bin
-          - env: picco
-            asset: firmware-picco.bin
-          - env: onepage
-            asset: firmware-onepage.bin
+        # The owner's device, x4c (X4 Classic), builds on every run. The rest
+        # build only on PRs with the all-boards label, for example before
+        # sending work upstream. pr-firmware-comment.js assumes x4c always builds.
+        env: ${{ fromJSON(contains(github.event.pull_request.labels.*.name, 'all-boards') && '["x4c","default","sticky","x4pro","papermono","metalio_eink4","eego_a4","picco","onepage"]' || '["x4c"]') }}
+    env:
+      # Short board-specific names keep pull-request artifacts easy to identify.
+      # The release workflow applies the published crosspoint-<version>-<device>.bin names.
+      ASSET: ${{ matrix.env == 'default' && 'firmware.bin' || format('firmware-{0}.bin', matrix.env) }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -169,7 +168,7 @@ jobs:
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.asset }}
+          name: ${{ env.ASSET }}
           path: .pio/build/${{ matrix.env }}/firmware.bin
           if-no-files-found: error
 

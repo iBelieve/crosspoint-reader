@@ -65,11 +65,11 @@ chmod +x .githooks/pre-commit
 With an existing compilation setup, run the selected profile directly:
 
 ```sh
-pio run -e default
+pio run -e x4c
 ```
 
-`pio run` also selects the C3 X3/X4 profile. Select an existing board environment
-in `platformio.ini` for other devices; see [device profiles](./touch-and-ui.md#building-and-testing-on-other-devices).
+A bare `pio run` selects the C3 X3/X4 profile (`default`). Select an existing
+board environment in `platformio.ini` for other devices; see [device profiles](./touch-and-ui.md#building-and-testing-on-other-devices).
 Keep the installed tools, packages, and build caches. The setup commands below
 apply only to a new environment or an identified missing or incompatible
 dependency; they are not steps to repeat before each build.
@@ -111,15 +111,15 @@ use the [normal build command](#build).
 ## Flash
 
 ```sh
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 ## First checks before opening a PR
 
 ```sh
 ./bin/clang-format-fix
-pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
-pio run
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+pio run -e x4c
 ```
 
 Development builds apply the Git version only to sources that use

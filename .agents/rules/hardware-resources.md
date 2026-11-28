@@ -4,10 +4,20 @@
 
 * MCUs: ESP32-C3 (X3/X4, single-core RISC-V @ 160MHz), ESP32-S3
   (including Sticky, X4 Pro, X4 Classic, Paper Mono, and Metalio E-Ink 4,
-  dual-core Xtensa LX7), and classic ESP32 on SDK boards such as M5Paper v1.1
-* RAM: ~380KB usable on ESP32-C3 (VERY LIMITED - primary project constraint)
-  * **NO PSRAM on C3**.
-  * **Single Buffer Mode**: One framebuffer sized for the runtime panel
+  dual-core Xtensa LX7), ESP32-C61 (OnePage), and classic ESP32 on SDK boards
+  such as M5Paper v1.1
+* RAM: ~380KB usable on ESP32-C3, with **no PSRAM**. The `x4c` env builds with
+  `BOARD_HAS_PSRAM` on an `esp32-s3-devkitc1-n16r8` profile (16 MB flash,
+  8 MB PSRAM) in `platformio.ini`. OnePage (ESP32-C61) also defines
+  `BOARD_HAS_PSRAM` but has only 2 MB of PSRAM, so that flag does not mean
+  x4c-class memory.
+* On S3 boards with the prebuilt sdkconfig, including `x4c`, `malloc` and `new`
+  requests above 4,096 B already go to PSRAM (see
+  `lib/BlePageTurner/src/RadioPolicy.h`). An `x4c` internal-heap reading does
+  not show whether the same buffers fit the C3, where they come from internal
+  RAM.
+* **Single Buffer Mode** on every board: one framebuffer sized for the runtime
+  panel
 * X4 baseline flash: 16MB (Instruction storage and static data)
 * X4 baseline display: 800x480 E-Ink (Slow refresh, monochrome, 1-2s full update)
   * Framebuffer: 48,000 bytes (800 × 480 ÷ 8)
@@ -17,12 +27,32 @@
 Check `platformio.ini`, the selected SDK `BoardConfig`, and `lib/hal/` for the
 actual display size, touch/buttons, frontlight, grayscale, storage bus, USB-MSC,
 and PSRAM capabilities. S3 does not by itself guarantee usable PSRAM or touch;
-X4 Classic is a button-only board. Keep C3 operation viable when adding a
-capability available only on richer boards.
+X4 Classic is a button-only board.
 
-CrossPoint's checked-in build and release targets are `default` (X3/X4),
-`sticky`, `x4pro`, `x4c`, `papermono`, and `metalio_eink4`. Inspect the current
-workflow matrices for coverage. Additional SDK profiles are not automatically
+### Resource target
+
+This fork's target is the X4 Classic (`x4c`). Budget new optional features,
+such as apps, against it: they may use its PSRAM and larger internal RAM.
+
+- Every release target in `.github/workflows/release.yml` must still build.
+- When a feature needs more memory than a board has (for example the C3 or
+  OnePage), compile it out of that board with a compile-time gate:
+  `FREEINK_MCU_*` to drop a whole chip family (as `src/main.cpp` does with
+  `FREEINK_MCU_C3`), `FREEINK_DEVICE_*`, `FREEINK_CAP_*`, or a new `-D` flag.
+  Include `BoardConfig.h` first, or `#if` reads these as 0. A runtime check
+  leaves the code in the build. Put a new flag in every env with that board's
+  `FREEINK_DEVICE_*` flag (for the C3: `default`, `gh_release`,
+  `gh_release_rc` and `slim`; for others: `<board>`, `<board>-gh_release` and
+  `<board>-gh_release_rc`). Add the `all-boards` label to the PR: without it CI
+  builds only `x4c`, and with it only each board's dev env. Build one release
+  env of each affected board locally, or say in the PR that you could not. Say in the PR which boards leave the feature out.
+- Changes to the shared reader core must keep working on every release
+  target. Use per-board limits where needed, as `CLIPPING_MAX_PER_BOOK` in
+  `src/ClippingStore.h` does.
+- Changes meant for upstream keep upstream's C3 baseline.
+
+The release targets are the boards in the `.github/workflows/release.yml`
+matrix. With the `all-boards` label, CI builds the dev env of each of them. Additional SDK profiles are not automatically
 CrossPoint release targets or evidence of device verification.
 
 Budget internal RAM and PSRAM separately with `HalMemory::getInternalHeap()`
@@ -71,7 +101,8 @@ the cost over one that needs measuring:
   change of the kinds above. Find it and fix it in the SDK instead of
   accepting the growth here.
 
-CI posts a per-target size comparison on each pull request. If a feature still
+CI posts a size comparison for `x4c` on each pull request; measure other
+targets locally as described below. If a feature still
 adds code for targets or callers that do not use it, state the number in the PR
 description with the reason; "the feature needs it" is not one when a pointer,
 a shared function or a build flag would avoid it. To measure before pushing,
