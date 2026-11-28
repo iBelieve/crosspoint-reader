@@ -32,6 +32,7 @@ const site = resolve(positionals[0]);
 const out = resolve(values.out);
 mkdirSync(out, { recursive: true });
 
+const logs = [];
 const server = createServer((req, res) => {
   // A bad request must answer 404, not crash the test before its log is written.
   let body;
@@ -58,7 +59,6 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const url = `http://127.0.0.1:${server.address().port}/?CROSSPOINT_SIM_SCREEN_TEXT=1`;
 
-const logs = [];
 const browser = await chromium.launch();
 let failure = null;
 try {
@@ -106,13 +106,15 @@ try {
   // The on-screen keys: a right-click must not press a key (its context menu
   // would swallow the release), and a click on ▼ turns the page.
   const down = page.locator('button[data-code="ArrowDown"]');
-  from = logs.length;
+  const rightClick = logs.length;
   await down.click({ button: 'right' });
   await sleep(1000);
-  if (logs.slice(from).some((l) => l.includes(PAGE_TWO_WORD))) throw new Error('a right-click pressed an on-screen key');
-  from = logs.length;
   await down.click({ delay: 100 });
-  await waitLog(new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), from);
+  await waitLog(new RegExp(`SCREEN:.*${PAGE_TWO_WORD}`), rightClick);
+  await sleep(1500);
+  // A right-click that pressed ▼ shows page 2 too, or moves past it.
+  const turns = logs.slice(rightClick).filter((l) => l.startsWith('[SIM] SCREEN:'));
+  if (turns.length !== 1) throw new Error(`expected one page turn, saw ${turns.length} screens: a right-click pressed a key?`);
   await sleep(300);
   await shot('5-page2');
 
