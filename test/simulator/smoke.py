@@ -6,7 +6,7 @@ screens: Home, the file browser, page 1 of a generated EPUB, then page 2
 after a page turn. Usage:
 
     pio run -e simulator
-    python3 test/simulator/smoke.py .pio/build/simulator/program --out sim-artifacts
+    python3 test/simulator/smoke.py .pio/build/simulator/program
 
 The output folder keeps the simulator log and one BMP screenshot per step.
 """
@@ -23,8 +23,8 @@ from sample_book import PAGE_ONE_WORD, PAGE_TWO_WORD, make_sample_epub
 BOOK = "smoke.epub"
 # Screenshots in script order; every one must be saved by this run.
 SHOTS = ("1-home", "2-files", "3-page1", "4-page2")
-# Generous upper bound for the whole run; each WAIT also has its own timeout.
-RUN_TIMEOUT_S = 180
+WAIT_TIMEOUT_MS = 30000
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def shot(out, index):
@@ -32,23 +32,24 @@ def shot(out, index):
 
 
 def input_script(out):
-    # Times count from the previous WAIT. A WAIT that never matches ends the
-    # run with exit status 1 after CROSSPOINT_SIM_WAIT_TIMEOUT_MS.
+    # Times count from the previous WAIT, and events at the same time keep
+    # their order, so a WAIT timed with its key press starts after it. A WAIT
+    # that never matches ends the run with exit status 1 after WAIT_TIMEOUT_MS.
     steps = [
         "0:WAIT:Entering activity: Home",
         "500:WAIT:SCREEN:.*Browse Files",
         f"0:SHOT:{shot(out, 0)}",
         "300:ENTER",
-        "0:WAIT:Entering activity: FileBrowser",
+        "300:WAIT:Entering activity: FileBrowser",
         # The browser lists the name, with or without ".epub", or the title.
         # The page text never has "smoke" as a separate word.
         "0:WAIT:SCREEN:.*([:|] smoke( \\||\\.epub|$)|Simulator Smoke)",
         f"0:SHOT:{shot(out, 1)}",
         "300:ENTER",
-        f"0:WAIT:SCREEN:.*{PAGE_ONE_WORD}",
+        f"300:WAIT:SCREEN:.*{PAGE_ONE_WORD}",
         f"0:SHOT:{shot(out, 2)}",
         "300:DOWN",
-        f"0:WAIT:SCREEN:.*{PAGE_TWO_WORD}",
+        f"300:WAIT:SCREEN:.*{PAGE_TWO_WORD}",
         f"0:SHOT:{shot(out, 3)}",
         "300:QUIT",
     ]
@@ -61,7 +62,8 @@ def input_script(out):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("program", type=Path, help="simulator binary, e.g. .pio/build/simulator/program")
-    parser.add_argument("--out", type=Path, default=Path("sim-artifacts"), help="folder for the log and screenshots")
+    parser.add_argument("--out", type=Path, default=REPO_ROOT / "sim-artifacts",
+                        help="folder for the log and screenshots (default: sim-artifacts/ in the repo root)")
     args = parser.parse_args()
 
     program = args.program.resolve()
@@ -76,6 +78,9 @@ def main():
     for index in range(len(SHOTS)):
         shot(out, index).unlink(missing_ok=True)
 
+    script = input_script(out)
+    # Every WAIT may use its full timeout; the margin covers startup and delays.
+    run_timeout_s = script.count(":WAIT:") * WAIT_TIMEOUT_MS // 1000 + 60
     env = {key: value for key, value in os.environ.items() if not key.startswith(("CROSSPOINT_SIM_", "CROSSPOINT_EMU_"))}
     with tempfile.TemporaryDirectory(prefix="crosspoint-sim-smoke-") as temp:
         sd = Path(temp) / "sd"
@@ -89,16 +94,16 @@ def main():
             SDL_RENDER_DRIVER="software",
             CROSSPOINT_SIM_SD=str(sd),
             CROSSPOINT_SIM_SCREEN_TEXT="1",
-            CROSSPOINT_SIM_WAIT_TIMEOUT_MS="30000",
+            CROSSPOINT_SIM_WAIT_TIMEOUT_MS=str(WAIT_TIMEOUT_MS),
             # Avoid clashing with anything else on the default 8080/8081.
             CROSSPOINT_SIM_HTTP_PORT="18180",
-            CROSSPOINT_SIM_INPUT_SCRIPT=input_script(out),
+            CROSSPOINT_SIM_INPUT_SCRIPT=script,
         )
         log_path = out / "simulator.log"
         with log_path.open("w") as log:
             try:
                 result = subprocess.run([str(program)], cwd=temp, env=env, stdout=log,
-                                        stderr=subprocess.STDOUT, timeout=RUN_TIMEOUT_S)
+                                        stderr=subprocess.STDOUT, timeout=run_timeout_s)
                 status = result.returncode
             except subprocess.TimeoutExpired:
                 status = None
@@ -107,14 +112,15 @@ def main():
                 return 1
 
     log_text = log_path.read_text(errors="replace")
-    missing = [SHOTS[i] for i in range(len(SHOTS)) if not shot(out, i).is_file()]
+    # SDL creates the file before writing it, so an empty file is a failed save.
+    missing = [SHOTS[i] for i in range(len(SHOTS)) if not shot(out, i).is_file() or shot(out, i).stat().st_size == 0]
     if status == 0 and not missing:
         print(f"simulator smoke test passed; artifacts in {out}")
         return 0
 
     print("simulator smoke test FAILED", file=sys.stderr)
     if status is None:
-        print(f"  the simulator did not exit within {RUN_TIMEOUT_S} s", file=sys.stderr)
+        print(f"  the simulator did not exit within {run_timeout_s} s", file=sys.stderr)
     else:
         print(f"  exit status {status}", file=sys.stderr)
     if missing:
