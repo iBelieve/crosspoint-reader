@@ -85,7 +85,8 @@ below are from the repository root.
   (framebuffer line), `.github/workflows/ci.yml` (x4c-only build matrix,
   `all-boards` label, concurrency, x4c cppcheck),
   `.github/scripts/pr-firmware-comment.js` and `firmware-size-comparison.js`
-  (built-board list, x4c baseline wording), `README.md` (scope links, x4c
+  (built-board list, cancelled and superseded runs, missing-baseline wording),
+  `test/firmware_comment.test.js` (tests for those), `README.md` (scope links, x4c
   pre-PR and flash commands), `docs/contributing/` (x4c check, build and flash
   commands), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
@@ -96,6 +97,9 @@ below are from the repository root.
 - **Merge method:** a sync PR must land as a merge commit, not a squash, so
   git records the upstream parent. If the repository allows only squash
   merges, the owner merges the sync locally and pushes it.
+
+When upstream adds a release board, add it to the `all-boards` list in
+`ci.yml` and to `allBuilds` in `pr-firmware-comment.js`.
 
 If you edit another file for fork policy, add it to this list. Then run the
 full verification list.

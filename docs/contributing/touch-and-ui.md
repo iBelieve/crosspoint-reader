@@ -143,7 +143,8 @@ As with all input: never call the SDK `InputManager` or read GPIO directly. The 
 ## Building and testing on other devices
 
 Select a checked-in environment from `platformio.ini` before creating a local
-profile. CrossPoint's CI and release workflows currently cover:
+profile. The release workflow builds these boards. PR CI builds only `x4c`,
+and all of them on PRs with the `all-boards` label:
 
 | Device | Development environment | MCU |
 | --- | --- | --- |
@@ -154,6 +155,8 @@ profile. CrossPoint's CI and release workflows currently cover:
 | M5Stack Paper Mono | `papermono` | ESP32-S3 |
 | Metalio E-Ink 4 | `metalio_eink4` | ESP32-S3 |
 | Onyx BOOX Picco | `picco` | ESP32-S3 |
+| EEGO A4 | `eego_a4` | ESP32-S3 |
+| OnePage | `onepage` | ESP32-C61 |
 
 Build with `pio run -e <environment>`. X3 and X4 share a binary with runtime
 board selection; different MCU families require separate binaries. Check the

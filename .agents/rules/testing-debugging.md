@@ -46,7 +46,7 @@ Device checks in the PR test plan cover changed behavior, relevant orientations/
 and resource/cache effects. Changed input, display, or layout paths cover all
 four orientations: portrait, inverted, landscape CW, and landscape CCW.
 Measure on `x4c`, and on each other release board that still compiles the
-change (at least the C3), or give a labeled estimate for boards you cannot
+change (including the C3 when it compiles the change), or give a labeled estimate for boards you cannot
 measure. An `x4c` reading alone does not show C3 or OnePage fit. Target: more than 50 KB free internal heap and no leaks;
 measure internal/PSRAM heaps and largest blocks separately across relevant repeated
 book, dictionary, font, or WiFi transitions. Free bytes alone do not prove an
