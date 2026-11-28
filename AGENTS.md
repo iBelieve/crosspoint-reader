@@ -100,7 +100,9 @@ yourself; do not leave them for CI to find.
    so do not use it as the final check.
 2. **Host tests:** `cmake -S test -B build/test && cmake --build build/test && ctest --test-dir build/test --output-on-failure -j`,
    plus `python3 -m unittest discover -s test -p test_firmware_stats.py` and
-   `node --test test/firmware_comment.test.js`.
+   `node --test test/firmware_comment.test.js`. Run the suite under ASan and
+   UBSan too (see `test/README`) when a change touches parsing, buffers, or
+   other memory handling.
 3. **Static analysis:** `pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
    For Python, `ruff check .` and `ruff format --check .` (ruff 0.16.9, as
    CI pins; `ruff.toml` lists the covered paths). For JavaScript, `npm ci && npx eslint .`.
