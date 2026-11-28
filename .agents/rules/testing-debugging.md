@@ -45,7 +45,7 @@ alter firmware output/build. Check ignored outputs before staging, using the
 Device checks in the PR test plan cover changed behavior, relevant orientations/remapping,
 and resource/cache effects. Changed input, display, or layout paths cover all
 four orientations: portrait, inverted, landscape CW, and landscape CCW.
-C3 baseline target: more than 50 KB free and no leaks;
+Target on each board you measure: more than 50 KB free internal heap and no leaks;
 measure internal/PSRAM heaps and largest blocks separately across relevant repeated
 book, dictionary, font, or WiFi transitions. Free bytes alone do not prove an
 allocation will fit. For layout changes, back up progress and verify affected

@@ -5,8 +5,9 @@
 * MCUs: ESP32-C3 (X3/X4, single-core RISC-V @ 160MHz), ESP32-S3
   (including Sticky, X4 Pro, X4 Classic, Paper Mono, and Metalio E-Ink 4,
   dual-core Xtensa LX7), and classic ESP32 on SDK boards such as M5Paper v1.1
-* RAM: ~380KB usable on ESP32-C3 (VERY LIMITED - primary project constraint)
-  * **NO PSRAM on C3**.
+* RAM: ~380KB usable on ESP32-C3, with **no PSRAM**. The `x4c` env builds with
+  `BOARD_HAS_PSRAM` on an `esp32-s3-devkitc1-n16r8` profile (16 MB flash,
+  8 MB PSRAM) in `platformio.ini`.
   * **Single Buffer Mode**: One framebuffer sized for the runtime panel
 * X4 baseline flash: 16MB (Instruction storage and static data)
 * X4 baseline display: 800x480 E-Ink (Slow refresh, monochrome, 1-2s full update)
@@ -17,8 +18,17 @@
 Check `platformio.ini`, the selected SDK `BoardConfig`, and `lib/hal/` for the
 actual display size, touch/buttons, frontlight, grayscale, storage bus, USB-MSC,
 and PSRAM capabilities. S3 does not by itself guarantee usable PSRAM or touch;
-X4 Classic is a button-only board. Keep C3 operation viable when adding a
-capability available only on richer boards.
+X4 Classic is a button-only board.
+
+### Resource target
+
+This fork's target is the X4 Classic (`x4c`). Budget new features against it:
+they may use PSRAM through `HalMemory::allocatePsram()` and the S3's larger
+internal RAM. Every release target must still build. When a feature needs more
+memory than a board has, leave it out of that board's build (a build flag or a
+capability check) instead of shipping it broken there, and say so in the PR.
+Changes to the shared reader core should keep working on the C3 when that
+costs little.
 
 CrossPoint's checked-in build and release targets are `default` (X3/X4),
 `sticky`, `x4pro`, `x4c`, `papermono`, and `metalio_eink4`. Inspect the current
