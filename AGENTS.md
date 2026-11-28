@@ -1,6 +1,6 @@
 # CrossPoint Reader agent guide
 
-CrossPoint Reader is open-source e-reader firmware for Xteink and other FreeInk-supported devices. Its mission is a lightweight, high-performance reading experience focused on EPUB rendering. This fork targets the Xteink X4 Classic (`x4c`, ESP32-S3 with PSRAM), and its features may rely on that board's extra memory. The ESP32-C3 X3/X4 (`default`) has roughly 380 KB usable RAM and no PSRAM; it must still build, but a feature that needs more memory may be left out of it. See [hardware-resources.md](.agents/rules/hardware-resources.md#resource-target). Other board profiles have different CPUs, display sizes, input, and memory capabilities; check the selected profile before assuming them.
+CrossPoint Reader is open-source e-reader firmware for Xteink and other FreeInk-supported devices. Its mission is a lightweight, high-performance reading experience focused on EPUB rendering. This fork targets the Xteink X4 Classic (`x4c`, ESP32-S3 with PSRAM), and its features may rely on that board's extra memory. The ESP32-C3 X3/X4 (`default`) has roughly 380 KB usable RAM and no PSRAM; it must still build, but an optional feature that needs more memory may be compiled out of it. Every board has one framebuffer sized for its panel. See [hardware-resources.md](.agents/rules/hardware-resources.md#resource-target). Other board profiles have different CPUs, display sizes, input, and memory capabilities; check the selected profile before assuming them.
 
 ## FreeInk SDK
 

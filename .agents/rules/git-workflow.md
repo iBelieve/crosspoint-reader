@@ -79,7 +79,12 @@ below are from the repository root.
   owner). Upstream's "Human ownership" and "Mandatory firmware handoff"
   sections stay deleted. The same applies to the fork edits in
   `.agents/README.md`, `.agents/rules/testing-debugging.md`,
-  `.agents/rules/ui-activities.md`, `README.md` (scope links), `ROADMAP.md`
+  `.agents/rules/ui-activities.md`, the AGENTS.md intro paragraph (x4c memory
+  target), `.agents/rules/hardware-resources.md` (memory facts, "Resource
+  target", x4c size comparison), `.agents/rules/architecture-hal.md`
+  (framebuffer line), `.agents/skills/scope-discipline/SKILL.md` (budget step),
+  `README.md` (scope links, x4c pre-PR commands), `docs/contributing/`
+  (x4c check and build commands), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
 - **Everything else** in `.agents/` is upstream technical guidance. Take

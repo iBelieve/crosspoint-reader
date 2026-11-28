@@ -204,7 +204,7 @@ After rebuilding the system configuration, reconnect the device or reload udev r
 ### Build / flash / monitor
 
 ```bash
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 ### Contributor pre-PR checks

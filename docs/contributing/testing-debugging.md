@@ -18,7 +18,7 @@ pio run -e x4c
 Flash firmware:
 
 ```sh
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 Open serial monitor:

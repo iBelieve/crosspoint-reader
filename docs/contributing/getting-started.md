@@ -111,7 +111,7 @@ use the [normal build command](#build).
 ## Flash
 
 ```sh
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 ## First checks before opening a PR
