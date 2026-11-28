@@ -259,7 +259,10 @@ TEST(SdCardFontTest, FragmentedBitmapGrowthRebuildsMetadataAndKeepsThePrefetch) 
   ASSERT_TRUE(font.load("fixture"));
   ASSERT_EQ(0, font.prewarm(page(FIRST, 50).c_str(), 1, false, false, false));
   struct HeapReportGuard {
+    HeapReportGuard() = default;
     ~HeapReportGuard() { ESP.largestBlock = 200 * 1024; }
+    HeapReportGuard(const HeapReportGuard&) = delete;
+    HeapReportGuard& operator=(const HeapReportGuard&) = delete;
   } guard;
   ESP.largestBlock = 8 * 1024;
   const auto text = page(FIRST, 200);
@@ -280,10 +283,13 @@ TEST(SdCardFontTest, BitmapAllocationRetriesAfterEvictingRebuildableAdvances) {
   ASSERT_TRUE(font.hasAdvanceTable());
   ASSERT_EQ(0, font.prewarm(page(FIRST, 50).c_str(), 1, false, false, false));
   struct AllocationGuard {
+    AllocationGuard() = default;
     ~AllocationGuard() {
       ESP.largestBlock = 200 * 1024;
       failNextArraySize = 0;
     }
+    AllocationGuard(const AllocationGuard&) = delete;
+    AllocationGuard& operator=(const AllocationGuard&) = delete;
   } guard;
   ESP.largestBlock = 8 * 1024;
   failNextArraySize = 201 * BITMAP_BYTES;

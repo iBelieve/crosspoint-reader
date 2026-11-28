@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -228,4 +229,24 @@ TEST(TextBlockRuby, RejectsARubyLengthOverTheLimit) {
 TEST(TextBlockRuby, RejectsACutOffRubyText) {
   EXPECT_EQ(loadDamagedRuby([](std::string& bytes, const size_t at) { bytes.resize(at + sizeof(uint32_t) + 3); }),
             nullptr);
+}
+
+TEST(TextBlockDisplay, RejectsATruncatedHeader) {
+  const std::vector<std::string> words = {"\xE0\xA6\x95", "\xE0\xA6\x96"};
+  TextBlock block(words, {0, 20}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(), {}, {}, {},
+                  UINT16_MAX, {kShaped, kShaped});
+  const ScopedTempDir tempDir;
+  const auto path = tempDir.path() / "truncated.bin";
+  {
+    HalFile out;
+    ASSERT_TRUE(out.open(path.c_str(), "wb"));
+    ASSERT_TRUE(block.serialize(out));
+  }
+  // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2).
+  for (const auto size : {0, 1, 2, 4, 6, 8}) {
+    std::filesystem::resize_file(path, size);
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    EXPECT_EQ(TextBlock::deserialize(in), nullptr) << size << " header bytes";
+  }
 }

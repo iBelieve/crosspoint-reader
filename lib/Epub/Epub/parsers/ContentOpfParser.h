@@ -105,6 +105,8 @@ class ContentOpfParser final : public Print {
         cache(cache),
         metadataOnly(metadataOnly) {}
   ~ContentOpfParser() override;
+  ContentOpfParser(const ContentOpfParser&) = delete;
+  ContentOpfParser& operator=(const ContentOpfParser&) = delete;
 
   bool setup();
 

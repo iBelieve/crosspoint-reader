@@ -80,8 +80,8 @@ bool PageLine::serialize(HalFile& file) {
 }
 
 std::unique_ptr<PageLine> PageLine::deserialize(HalFile& file) {
-  int16_t xPos;
-  int16_t yPos;
+  int16_t xPos = 0;
+  int16_t yPos = 0;
   serialization::readPod(file, xPos);
   serialization::readPod(file, yPos);
 
@@ -117,8 +117,8 @@ bool PageImage::serialize(HalFile& file) {
 }
 
 std::unique_ptr<PageImage> PageImage::deserialize(HalFile& file) {
-  int16_t xPos;
-  int16_t yPos;
+  int16_t xPos = 0;
+  int16_t yPos = 0;
   serialization::readPod(file, xPos);
   serialization::readPod(file, yPos);
 
