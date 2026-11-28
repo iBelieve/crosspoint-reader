@@ -1,108 +1,103 @@
 ---
 name: firmware-handoff
-description: Final checks and human handoff for completed firmware/build changes. Use after implementation and self-review; excludes read-only audits and reviewer tasks.
+description: Final checks, one independent review, and the PR test plan for completed firmware/build changes. Use after implementation and self-review, before marking a PR ready; excludes read-only audits and reviewer tasks.
 ---
 
 # Firmware handoff
 
-Run after implementation and main-agent self-review, before calling a firmware
-change ready or making an approved local commit. The main agent owns the result;
-reviewer output is evidence, not authority. This workflow has at most two review
-rounds per logical change, even when slot limits require dispatching in batches.
+Run after implementation and self-review, before marking the PR ready. A
+draft PR may already be open. The main agent owns the result; reviewer output is evidence, not
+authority.
 
-## 1. Prepare the review candidate
+## 1. Prepare the candidate
 
-Record the human requirement, comparison base, changed files, and current diff,
-including uncommitted work and any SDK changes. Account for every hunk and
-identify unrelated user work. Finish self-review, relevant tests, and
-`./bin/clang-format-fix -g` before dispatch. Build early only when needed to
-resolve a concrete compilation or build-configuration question; the required
-final build belongs after review fixes.
+Record the requirement, comparison base (`develop`), changed files, and diff,
+including uncommitted work and any SDK submodule changes. Account for every
+hunk. Leave unrelated work (especially the owner's uncommitted edits) out of
+the commit; never revert it. Self-review against the four review checklists below.
 
-**Done when:** the candidate meets the requirement, every hunk is accounted for,
-and checks run or unavailable checks with their reasons are recorded.
+**Done when:** every hunk is explained and the self-review is done.
 
-## 2. Dispatch the initial reviews
+## 2. Run every check
 
-Launch a separate independent read-only subagent for each axis, reserving a slot
-for the main agent. Never substitute the main agent for a reviewer:
+Run the [verification list](../../../AGENTS.md#verification-is-not-optional):
+format, host tests, `pio check`, firmware builds for affected boards, and any
+other job in `.github/workflows/ci.yml`. Follow the
+[testing rule](../../rules/testing-debugging.md) for build logs.
+
+- New or changed logic has host tests, and they pass.
+- The change adds no compiler warnings, cppcheck findings, or lint findings.
+- Record each command and its outcome. A check that could not run is reported
+  with its reason; it is not a pass.
+
+**Done when:** all checks pass, or each unavailable check is recorded with its
+reason and CI is relied on for it.
+
+## 3. One independent review
+
+Launch one read-only reviewer subagent with a fresh context. Give it the
+requirement, repository path, base, the pinned diff and revision, check
+results, and these four checklists, applying only those relevant to the
+change. Give it the needed discussion but not your own analysis or verdict:
 
 - [review-correctness](../review-correctness/SKILL.md)
 - [review-architecture](../review-architecture/SKILL.md)
 - [review-embedded](../review-embedded/SKILL.md)
 - [review-i18n-docs](../review-i18n-docs/SKILL.md)
 
-Use fresh reviewer contexts where supported. Give each a compact packet: human
-requirement and constraints, repository path, comparison base, pinned diff and
-revision, review axis, and main-agent check results/log paths. Supply necessary
-human discussion without the main agent's analysis or verdict. Include this
-scope in every reviewer task:
-"Inspect code, diffs, history, and recorded checks only. No file writes, tests,
-builds, or new diagnostics; request needed checks from the main agent."
-Reviewers read relevant rule sections and do not run handoff or publish.
+Include this scope: "Inspect code, diffs, history, and recorded checks only. No
+file writes, tests, builds, or new diagnostics; request needed checks from the
+main agent." For a large or risky change (new app, memory ownership, HAL or
+storage format changes), you may split the checklists across up to four
+reviewers.
 
-Keep the candidate unchanged while reviews run. Collect all four results before
-editing. A reviewer with no applicable changes may return a short explanation.
+Keep the candidate unchanged until the review returns.
 
-**Done when:** all four initial results are recorded against the same candidate.
+If the environment cannot run subagents, do a second, separate self-review
+pass against the same checklists and say so in the PR.
 
-## 3. Resolve findings as one batch
+**Done when:** the review result is recorded against the candidate.
 
-Collapse duplicates by root cause and verify findings against reachable code.
-Explain rejected findings and keep unresolved disagreements visible. Decide
-which advisory cleanups belong to the requirement; defer unrelated improvements.
-Apply all accepted fixes together, then verify the whole diff yourself.
+## 4. Resolve findings
 
-Allow one targeted follow-up round only when fixes invalidate a review's
-conclusions about behavior, ownership, resource costs, interfaces, persistent
-formats, build compatibility, or user-facing information. Reuse the original
-reviewers, giving them the diff since their reviewed candidate and the findings
-to verify. Mechanical corrections, formatting, and comment-only changes receive
-main-agent verification unless they change a substantive contract. Record which
-final changes each review covers.
+Verify each finding against reachable code. Fix the real ones together, explain
+rejected ones, and rerun the checks affected by the fixes. Ask the reviewer to
+re-check only when a fix changes behavior, ownership, resource use, an
+interface, or a stored format. Stop after two review rounds. The PR stays in
+draft, and you report to the owner instead of starting a third round, when a
+verified finding is still open or a fix after round two changed behavior,
+ownership, resource use, an interface, or a stored format without review.
 
-After this second round, fix verified problems and run affected checks. If a
-substantive concern or independently unreviewed material change remains, report
-it and leave handoff incomplete rather than starting an automatic third round.
+**Done when:** no verified finding is unaddressed and checks pass on the final
+diff.
 
-**Done when:** no verified finding remains unaddressed and independent reviews
-cover the final substantive changes within the two-round limit.
+## 5. Code review at xhigh
 
-## 4. Complete final checks
+Commit all fixes and push, then run the `xhigh` code review from the
+[verification rules](../../../AGENTS.md#verification-is-not-optional) on the
+pushed PR head (open a draft PR first if none exists). Fix real findings,
+rerun the checks affected by the fixes, commit, push, and run it again on the
+new head. After two `xhigh` rounds that
+still find real issues, leave the PR in draft and report to the owner.
 
-Run formatting and any affected tests not already green for the final change.
-Build each relevant firmware target once after the final substantive firmware or
-build edit, including configuration, code-generation sources, and translations.
-Follow the [testing rule](../../rules/testing-debugging.md). Preserve green
-results after formatting, comments, or documentation alone; repeat a check only
-when a change or failure invalidates it. Record commands, outcomes, and concrete
-reasons for unavailable checks; an unavailable check is not a pass.
+**Done when:** an `xhigh` review has run on the pushed final head with no
+unaddressed real finding. Make no further commits before step 6.
 
-**Done when:** relevant tests, formatting, and final firmware builds have passed,
-or missing verification is explicitly reported and handoff remains incomplete.
+## 6. Mark the PR ready
 
-## 5. Hand off the actual design
+Mark the PR ready following the
+[git rules](../../rules/git-workflow.md). In the PR description, give:
 
-Explain old and new behavior, state/resource ownership, affected files, the
-important tradeoff, checks, and remaining risks in plain English. Point to the
-diff. Ask the human to accept the specific behavior and design tradeoff just
-explained, including responsibility for maintaining it. Name the relevant choice:
-for example, bounded temporary storage and a fallback when allocation fails.
-For a straightforward fix, ask whether the new behavior and its state ownership
-match their intent; do not invent a tradeoff. A generic understanding/ownership
-question does not complete handoff. Prescribe no confirmation phrase. Recognize
-explicit acceptance already given for this logical change; record it once and
-reopen only after a material design change. Continuation or commit approval alone
-does not establish understanding and ownership.
+- old and new behavior, and who owns any new state or memory;
+- the main design tradeoff, if there is one;
+- checks run and results, including any that could not run;
+- a device test plan: steps, expected results, likely failure signs, and the
+  orientations, resources, and caches affected;
+- any change to partitions, bootloader, OTA/recovery code, the HAL, or the SDK
+  pin, with its update and rollback risk.
 
-Give applicable hardware steps with expected results and likely failure signs,
-including orientations, resources, and caches when affected. Hardware testing is
-the human's responsibility and must happen before a PR is opened. Never claim
-hardware verification yourself. Publication follows the root guide's human
-ownership policy and the [Git rule](../../rules/git-workflow.md).
+Wait for CI on the reviewed head before marking it ready. If CI fails, fix it
+and go back to step 5 for the new head. Never claim a hardware result.
 
-**Done when:** checks and independent reviews cover the final change, no verified
-finding remains, and explicit human acceptance covers the described behavior,
-architecture, and maintenance responsibility. The hardware test plan is provided.
-If the human rejects the architecture, ask what must change and revise before
-calling it ready.
+**Done when:** the PR is marked ready on a reviewed head with green CI, the description covers the points
+above, and the owner has been told it is ready.

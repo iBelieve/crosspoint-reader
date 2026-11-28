@@ -1,23 +1,25 @@
 ---
 name: scope-discipline
-description: Dedicated e-reader feature scope. Use when adding features, activities, libraries, settings, dependencies, or expanding the firmware surface.
+description: Fork feature scope and resource gate. Use when adding features, apps, activities, libraries, settings, dependencies, or expanding the firmware surface.
 ---
 
 # Scope Discipline
 
-The mission: do one thing exceptionally well, focused reading on constrained
-hardware. `SCOPE.md` is the source of truth for what is in and out. Read it
-before adding surface. This is the gate to run before writing a new feature.
+This fork is a reading and study device on constrained hardware. `SCOPE.md` is
+the source of truth for what is in and out. Read it before adding surface.
+Interactive apps such as flashcards and a Bible reader are in scope; the
+hardware limits are not negotiable.
 
 ## The gate
 
-Before adding a feature, activity, lib, setting, or dependency, answer in order:
+Before adding a feature, app, activity, lib, setting, or dependency, answer in
+order:
 
-1. **Is it in `SCOPE.md`?** Explicitly out: interactive apps (notepad,
-   calculator, games), active connectivity (RSS, news, browser), media/audio
-   playback. If it is out, say so and stop.
-2. **Does it materially improve focused reading?** If the benefit is
-   "nice to have" or serves a different use case, it is out. This is not a PDA.
+1. **What does `SCOPE.md` say?** In scope: proceed. "Ask first" (browsers,
+   RSS, media playback, PDF, background Wi-Fi or tasks): state the cost and ask
+   the owner before building it. Out: say so and stop.
+2. **What does the owner use it for?** State the concrete use on the device.
+   "Might be useful" is not a requirement.
 3. **What resources does it need?** Account for steady-state and peak RAM,
    the largest required heap block, Flash/OTA slot headroom, and SD storage.
    Keep shared code within the C3 baseline. Check internal RAM and PSRAM
@@ -32,12 +34,23 @@ Before adding a feature, activity, lib, setting, or dependency, answer in order:
    Follow the [activity and power rules](../../rules/ui-activities.md#freertos-task-guidelines).
    Keep network ownership within the defined flow, including its child screens.
    Release it when that flow ends.
-6. **What must the human maintain?** Explain the cost of new dependencies,
-   settings, and failure paths alongside the concrete reading benefit.
+6. **What must the owner maintain?** Explain the cost of new dependencies,
+   settings, and failure paths alongside the concrete benefit.
 
 If a request fails the gate, push back with the specific reason and the
-`SCOPE.md` basis, and offer the in-scope alternative. Make the call and say why;
-do not just hand over a menu.
+`SCOPE.md` basis, and offer the alternative that fits. Make the call and say
+why; do not just hand over a menu.
+
+## New apps
+
+- Put the app's logic in its own `lib/` directory with host tests; keep the
+  activity a thin UI layer.
+- Keep app data and state on the SD card in a documented, versioned format.
+  Migrate user state (review history, progress) on format changes; never
+  discard it.
+- Touch shared upstream code only where needed (menu entry, hook), so upstream
+  merges stay easy.
+- Release all app memory and tasks when the app exits.
 
 ## Surface awareness
 
@@ -66,11 +79,12 @@ choice; otherwise pick a sensible fixed default.
 
 ## Self-review
 
-- [ ] Checked against `SCOPE.md`; not on the out-of-scope list.
-- [ ] Stated the concrete reading benefit, not a generic "useful."
-- [ ] Accounted for RAM, largest-block, Flash/OTA, storage, power, and maintenance costs and explained why the reading benefit wins.
+- [ ] Checked against `SCOPE.md`; asked the owner first if it is on the ask-first list.
+- [ ] Stated the concrete use, not a generic "useful."
+- [ ] Accounted for RAM, largest-block, Flash/OTA, storage, power, and maintenance costs and explained why the benefit is worth them.
 - [ ] Labeled estimates, measurements, and pending device checks.
 - [ ] Defined network/task lifetimes, retry limits, sleep behavior, and failure/exit cleanup.
 - [ ] Checked whether an existing activity/setting/doc already covers it.
+- [ ] App logic is in `lib/` with host tests.
 - [ ] New setting (if any) is justified by a real user need, not added
       "just in case."
