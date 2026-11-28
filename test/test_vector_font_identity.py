@@ -2,22 +2,22 @@
 
 import json
 import os
-from pathlib import Path
 import shlex
 import subprocess
 import tempfile
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/SdCardFontSystem.cpp").read_text()
 start = source.index("int computeTtfFontId(")
-function = source[start:source.index("\n}\n", start) + 3]
+function = source[start : source.index("\n}\n", start) + 3]
 
 
 def expected_id(family, content_key, point_size, ui):
     data = (
         b"TTF-content-v1\0"
-        + (family or "").encode("utf-8") + b"\0"
+        + (family or "").encode("utf-8")
+        + b"\0"
         + content_key.to_bytes(4, "big")
         + bytes((point_size, ui))
     )
@@ -46,7 +46,7 @@ harness = (
     + "\nint main() {\n"
     + "\n".join(checks)
     + '\nassert(computeTtfFontId("Family", 123, 14) == '
-      'computeTtfFontId("Family", 123, 14, false));\n}\n'
+    'computeTtfFontId("Family", 123, 14, false));\n}\n'
 )
 
 with tempfile.TemporaryDirectory(prefix="vector-font-identity-") as directory:
@@ -54,9 +54,20 @@ with tempfile.TemporaryDirectory(prefix="vector-font-identity-") as directory:
     executable = Path(directory) / "identity"
     cpp.write_text(harness)
     subprocess.run(
-        [os.environ.get("CXX", "c++"), "-std=c++20", "-Wall", "-Wextra", "-Werror",
-         *shlex.split(os.environ.get("CXXFLAGS", "")),
-         "-UNDEBUG", "-I", str(ROOT / "lib/EpdFont"), str(cpp), "-o", str(executable)],
+        [
+            os.environ.get("CXX", "c++"),
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            *shlex.split(os.environ.get("CXXFLAGS", "")),
+            "-UNDEBUG",
+            "-I",
+            str(ROOT / "lib/EpdFont"),
+            str(cpp),
+            "-o",
+            str(executable),
+        ],
         check=True,
     )
     subprocess.run([str(executable)], check=True)

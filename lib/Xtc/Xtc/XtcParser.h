@@ -31,6 +31,8 @@ class XtcParser {
  public:
   XtcParser();
   ~XtcParser();
+  XtcParser(const XtcParser&) = delete;
+  XtcParser& operator=(const XtcParser&) = delete;
 
   // File open/close
   XtcError open(const char* filepath);
@@ -65,7 +67,7 @@ class XtcParser {
    * @return Error code
    */
   XtcError loadPageStreaming(uint32_t pageIndex,
-                             std::function<void(const uint8_t* data, size_t size, size_t offset)> callback,
+                             const std::function<void(const uint8_t* data, size_t size, size_t offset)>& callback,
                              size_t chunkSize = 1024);
 
   // Get title/author from metadata
@@ -82,7 +84,7 @@ class XtcParser {
   HalFile m_file;
   std::string m_filepath;
   bool m_isOpen;
-  XtcHeader m_header;
+  XtcHeader m_header{};
   std::vector<ChapterInfo> m_chapters;
   std::string m_title;
   std::string m_author;

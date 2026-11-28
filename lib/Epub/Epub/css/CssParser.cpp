@@ -291,9 +291,9 @@ bool interpretForcedBreak(const std::string_view value) {
 // CSS pixels for a border width token (thin/medium/thick or a length); false if not a width.
 bool interpretBorderWidth(const std::string_view token, uint8_t& out) {
   static constexpr std::string_view KEYWORDS[] = {"thin", "medium", "thick"};
-  for (uint8_t i = 0; i < std::size(KEYWORDS); ++i) {
+  for (size_t i = 0; i < std::size(KEYWORDS); ++i) {
     if (iequalsAscii(token, KEYWORDS[i])) {
-      out = i + 1;
+      out = static_cast<uint8_t>(i + 1);
       return true;
     }
   }
@@ -1281,7 +1281,7 @@ CssParser::ParseResult CssParser::loadFromStream(HalFile& source, const std::str
     return ParseResult::Error;
   }
 
-  size_t totalRead = 0;
+  [[maybe_unused]] size_t totalRead = 0;  // logged only
 
   // Use stack-allocated buffers for parsing to avoid heap reallocations
   StackBuffer selector;
@@ -2016,7 +2016,7 @@ CssParser::CacheLoadResult CssParser::loadFromCache() {
     return CacheLoadResult::Invalid;
   }
 
-  const bool partial = (flags & CSS_CACHE_FLAG_PARTIAL) != 0;
+  [[maybe_unused]] const bool partial = (flags & CSS_CACHE_FLAG_PARTIAL) != 0;
   LOG_DBG("CSS", "Loaded %u rules from %s cache", ruleCount, partial ? "partial" : "complete");
   return CacheLoadResult::Complete;
 }

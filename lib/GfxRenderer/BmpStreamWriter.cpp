@@ -47,8 +47,9 @@ bool writeBmpHeader(Print& bmpOut, const int width, const int height, const bool
 
   for (int i = 0; i < colors; ++i) {
     const auto gray = static_cast<uint8_t>(i * (oneBit ? 255 : 85));
-    if (!writeByte(bmpOut, gray) || !writeByte(bmpOut, gray) || !writeByte(bmpOut, gray) || !writeByte(bmpOut, 0))
-      return false;
+    for (const uint8_t byte : {gray, gray, gray, uint8_t{0}}) {
+      if (!writeByte(bmpOut, byte)) return false;
+    }
   }
   return true;
 }

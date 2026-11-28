@@ -17,7 +17,7 @@
  * flip_runs / find_run  (UAX#9 rule L2)
  * ═══════════════════════════════════════════════════════════════════════ */
 
-static int find_run(uchar* levels, int start, int count, int tlevel) {
+static int find_run(const uchar* levels, int start, int count, int tlevel) {
   for (int i = start; i < count; i++)
     if (tlevel <= levels[i]) return i;
   return count;
@@ -333,7 +333,7 @@ static uchar stype(ucschar c) {
 static ucschar shape_form(ucschar c, uchar form) {
   if (c >= SHAPE_FIRST && c <= SHAPE_LAST) {
     const uchar form_b = shapetypes[c - SHAPE_FIRST].form_b;
-    return form_b ? 0xFE00 + form_b + form : c;
+    return form_b ? (ucschar)(0xFE00 + form_b + form) : c;
   }
 
   int i = -1, j = lengthof(xshapeforms);
@@ -408,6 +408,8 @@ int do_shape(bidi_char* line, bidi_char* to, int count) {
             case 0x627: /* Alef → لا */
               ligFlag = 1;
               to[i].wc = (tempShape == SL || tempShape == SD || tempShape == SC) ? 0xFEFC : 0xFEFB;
+              break;
+            default:
               break;
           }
           if (ligFlag) {
@@ -509,6 +511,7 @@ static inline void dss_pop(DirStatusStack* s, uchar* emb, uchar* ovr, bool* isol
  * ═══════════════════════════════════════════════════════════════════════ */
 
 int do_bidi(bool autodir, int paragraphLevel, bidi_char* line, int count) {
+  if (count <= 0) return paragraphLevel; /* nothing to reorder; types[0] below needs a character */
   if (count > BIDI_MAX_LINE) count = BIDI_MAX_LINE;
 
   uchar currentEmbedding, currentOverride;
@@ -547,10 +550,7 @@ int do_bidi(bool autodir, int paragraphLevel, bidi_char* line, int count) {
     }
   }
 
-  if (autodir) {
-    if (resLevel >= 0) paragraphLevel = resLevel;
-  } else
-    resLevel = paragraphLevel;
+  if (autodir && resLevel >= 0) paragraphLevel = resLevel;
 
   /* Fast path: pure LTR line with LTR paragraph — nothing to reorder */
   if (!hasRTL && !paragraphLevel) return 0;

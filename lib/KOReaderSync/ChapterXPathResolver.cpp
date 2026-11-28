@@ -105,6 +105,10 @@ class ParagraphTextCounter final : public Print {
 
   ~ParagraphTextCounter() override { destroyXmlParser(parser); }
 
+  ParagraphTextCounter(const ParagraphTextCounter&) = delete;
+
+  ParagraphTextCounter& operator=(const ParagraphTextCounter&) = delete;
+
   bool ok() const { return parser != nullptr && parseOk; }
 
   bool finish() {
@@ -210,7 +214,6 @@ class ParagraphTextCounter final : public Print {
     }
   }
 
- private:
   XML_Parser parser = nullptr;
   bool parseOk = true;
   bool insideBody = false;
@@ -236,6 +239,10 @@ class XPathParagraphResolver final : public Print {
   }
 
   ~XPathParagraphResolver() override { destroyXmlParser(parser); }
+
+  XPathParagraphResolver(const XPathParagraphResolver&) = delete;
+
+  XPathParagraphResolver& operator=(const XPathParagraphResolver&) = delete;
 
   bool ok() const { return parser != nullptr && parseOk; }
 
@@ -378,6 +385,10 @@ class XPathProgressResolver final : public Print {
   }
 
   ~XPathProgressResolver() override { destroyXmlParser(parser); }
+
+  XPathProgressResolver(const XPathProgressResolver&) = delete;
+
+  XPathProgressResolver& operator=(const XPathProgressResolver&) = delete;
 
   bool ok() const { return parser != nullptr && parseOk; }
 

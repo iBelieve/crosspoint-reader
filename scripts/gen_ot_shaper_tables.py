@@ -45,8 +45,20 @@ def main():
     with tempfile.TemporaryDirectory() as workdir:
         src = harfbuzz_src(workdir)
         exe = Path(workdir) / "gen_ot_shaper_tables"
-        subprocess.run(["c++", "-std=c++17", "-O1", "-w", f"-I{src}", str(HERE / "gen_ot_shaper_tables.cc"),
-                        str(src / "harfbuzz.cc"), "-o", str(exe)], check=True)
+        subprocess.run(
+            [
+                "c++",
+                "-std=c++17",
+                "-O1",
+                "-w",
+                f"-I{src}",
+                str(HERE / "gen_ot_shaper_tables.cc"),
+                str(src / "harfbuzz.cc"),
+                "-o",
+                str(exe),
+            ],
+            check=True,
+        )
         header = subprocess.run([str(exe)], check=True, capture_output=True, text=True).stdout
     OUTPUT.write_text(header)
     print(f"wrote {OUTPUT}")

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-CrossPoint is firmware for the Xteink X4 (unaffiliated with Xteink), built with PlatformIO targeting the ESP32-C3 microcontroller.
+CrossPoint is firmware for Xteink and other e-readers (unaffiliated with Xteink), built with PlatformIO. This fork targets the X4 Classic (ESP32-S3); the ESP32-C3 X3/X4 must still build and run the reader core. See the [resource target](../../.agents/rules/hardware-resources.md#resource-target).
 
 At a high level, it is firmware that uses an activity-driven application architecture loop with persistent settings/state, SD-card-first caching, and a rendering pipeline optimized for e-ink constraints.
 
@@ -83,7 +83,7 @@ flowchart LR
 
 Why caching matters:
 
-- RAM is limited on ESP32-C3, so expensive parsed/layout data is persisted to SD
+- RAM is limited, most of all on the ESP32-C3, so expensive parsed/layout data is persisted to SD
 - repeat opens/page navigation can reuse cached data instead of full reparsing
 
 ## Reader internals call graph

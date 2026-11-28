@@ -9,14 +9,17 @@ function zip(stats) {
   return execFileSync('python3', ['-c', 'import io,sys,zipfile; b=io.BytesIO(); z=zipfile.ZipFile(b,"w"); z.writestr("firmware-stats.json",sys.stdin.read()); z.close(); sys.stdout.buffer.write(b.getvalue())'], {input: JSON.stringify(stats)});
 }
 function fixture() {
-  const run = {id: 20, workflow_id: 5, head_sha: sha, head_branch: 'feature', head_repository: {id: 2, owner: {login: 'contributor'}}, run_attempt: 1, conclusion: 'success'};
+  const run = {id: 20, workflow_id: 5, head_sha: sha, head_branch: 'feature', head_repository: {id: 2, owner: {login: 'contributor'}}, run_attempt: 1, status: 'completed', conclusion: 'success'};
   const pullRequest = {number: 10, state: 'open', head: {sha}, base: {ref: 'develop'}};
   const records = {20: [{name: 'firmware-stats-default', id: 20}], 10: [{name: 'firmware-stats-default', id: 10}]};
   const payloads = {20: zip({environment: 'default', sha, ram: 90, flash: 130, image: 200, base_sha: baseline}), 10: zip({environment: 'default', sha: baseline, ram: 100, flash: 120, image: 150})};
+  let jobs = [{name: 'Build default', conclusion: 'success'}, {name: 'Build x4c', conclusion: 'failure'},
+    {name: 'Build sticky', conclusion: 'skipped'}, {name: 'Build x4pro', conclusion: 'failure'}];
+  const warnings = [];
   let runs = [{id: 10, head_sha: baseline, event: 'push', head_branch: 'develop', html_url: 'https://example.test/run/10'}];
   const posted = [];
   const actions = {
-    listWorkflowRuns: 'runs', listWorkflowRunArtifacts: 'artifacts',
+    listWorkflowRuns: 'runs', listWorkflowRunArtifacts: 'artifacts', listJobsForWorkflowRun: 'jobs',
     downloadArtifact: async ({artifact_id}) => ({data: payloads[artifact_id]}),
   };
   const github = {
@@ -29,12 +32,16 @@ function fixture() {
       if (method === 'artifacts') return records[args.run_id] || [];
       if (method === 'pulls') return [pullRequest];
       if (method === 'comments') return [];
+      if (method === 'jobs') {
+        assert.equal(args.run_id, run.id); assert.equal(args.filter, 'latest');
+        return jobs;
+      }
       if (method === 'runs') return args.event === 'push' ? runs : [run];
       throw new Error(method);
     },
   };
-  return {payloads, github, context: {repo: {owner: 'upstream', repo: 'reader'}, payload: {workflow_run: run}}, core: {notice() {}, warning() {}}, run, pullRequest, builds, records, posted,
-    setRuns(value) {runs = value;}};
+  return {payloads, github, context: {repo: {owner: 'upstream', repo: 'reader'}, payload: {workflow_run: run}}, core: {notice() {}, warning(message) {warnings.push(message);}}, warnings, run, pullRequest, builds, records, posted,
+    setRuns(value) {runs = value;}, setJobs(value) {jobs = value;}};
 }
 
 test('exact byte deltas and unavailable values', () => {
@@ -138,5 +145,60 @@ test('queued publishers in completion order 19, 21, 20 retain the latest comment
       ? [{...f.run, id: 21}] : paginate(method, args);
     await publish(f);
     assert.equal(f.posted.length, id === 21 ? 1 : 0);
+  }
+});
+
+test('lists only boards this run built', async () => {
+  const workflow = require('node:fs').readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.match(workflow, /name: Build \$\{\{ matrix\.env \}\}\n/);
+  assert.match(workflow, /\|\| '\["x4c"\]'\) \}\}/);
+  const all = JSON.parse(workflow.match(/'all-boards'\) && '(\[[^']*\])'/)[1]);
+  const script = require('node:fs').readFileSync('.github/scripts/pr-firmware-comment.js', 'utf8');
+  assert.deepEqual([...script.matchAll(/\{ env: '([^']+)'/g)].map(m => m[1]).sort(), [...all].sort());
+  const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
+  await publish(f);
+  assert.deepEqual(f.warnings, []);
+  assert.match(f.posted[0].body, /X3 \/ X4 \(`firmware\.bin`\)/);
+  assert.match(f.posted[0].body, /Firmware unavailable: X4 Pro, X4 Classic\./);
+  assert.doesNotMatch(f.posted[0].body, /Sticky/);
+});
+test('without a usable job list, lists x4c and boards that uploaded artifacts', async () => {
+  for (const jobs of [[], new Error('denied')]) {
+    const f = fixture(); f.records[20].push({name: 'firmware.bin', id: 30});
+    if (Array.isArray(jobs)) f.setJobs(jobs);
+    else {
+      const paginate = f.github.paginate;
+      f.github.paginate = async (m, a) => { if (m === 'jobs') throw jobs; return paginate(m, a); };
+    }
+    await publish(f);
+    assert.match(f.posted[0].body, /X3 \/ X4 \(`firmware\.bin`\)/);
+    assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+    f.records[20] = []; f.posted.length = 0;
+    await publish(f);
+    assert.match(f.posted[0].body, /Firmware unavailable: X4 Classic\./);
+    assert.doesNotMatch(f.posted[0].body, /Sticky|X3 \/ X4/);
+  }
+});
+test('a board missing from the develop build is not reported as a failed build', async () => {
+  const f = fixture(); f.records[10] = [];
+  const body = await comparison(f);
+  assert.match(body, /baseline unavailable — develop does not build this board/);
+  assert.doesNotMatch(body, /build may have failed/);
+  f.builds = [{env: 'x4c', device: 'X4 Classic'}];
+  f.records[20] = [{name: 'firmware-stats-x4c', id: 21}];
+  f.payloads[21] = zip({environment: 'x4c', sha, ram: 90, flash: 130, image: 200, base_sha: baseline});
+  assert.match(await comparison(f), /X4 Classic: baseline unavailable — measurement missing/);
+});
+
+test('cancelled or unfinished newer runs do not supersede a finished run', async () => {
+  for (const newer of [{status: 'completed', conclusion: 'cancelled'}, {status: 'in_progress', conclusion: null}]) {
+    const f = fixture(); const paginate = f.github.paginate;
+    f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+      ? [{...f.run, id: 21, ...newer}] : paginate(method, args);
+    await publish(f); assert.equal(f.posted.length, 1);
+    const c = fixture(); c.run.conclusion = 'cancelled'; const paginateC = c.github.paginate;
+    c.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+      ? [{...c.run, id: 21, ...newer}] : paginateC(method, args);
+    await publish(c); assert.equal(c.posted.length, 0, 'a cancelled run yields to any newer run');
   }
 });

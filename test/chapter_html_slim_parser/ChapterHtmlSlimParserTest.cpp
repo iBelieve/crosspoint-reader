@@ -33,7 +33,8 @@ namespace {
 void installBuiltinVariants(GfxRenderer& renderer) {
   renderer.setFontVariantProvider({&renderer, [](void* ctx, const int fontId, const float scale) {
                                      const int variant = builtinReaderFontVariant(fontId, scale);
-                                     return static_cast<GfxRenderer*>(ctx)->getFontMap().count(variant) ? variant : 0;
+                                     return static_cast<GfxRenderer*>(ctx)->getFontMap().contains(variant) ? variant
+                                                                                                           : 0;
                                    }});
 }
 
@@ -426,6 +427,20 @@ TEST_F(ChapterHtmlSlimParserTest, PageImageDeserializeRejectsMissingImageBlock) 
   HalFile input;
   ASSERT_TRUE(input.open(path.c_str(), "rb"));
   EXPECT_EQ(PageImage::deserialize(input), nullptr);
+}
+
+TEST_F(ChapterHtmlSlimParserTest, PageDeserializeRejectsTruncatedElementCount) {
+  const ScopedTempDir tempDir;
+  const auto path = tempDir.path() / "truncated-page-cache.bin";
+  {
+    HalFile output;
+    ASSERT_TRUE(output.open(path.c_str(), "wb"));
+    const uint8_t halfCount = 1;
+    output.write(&halfCount, sizeof(halfCount));
+  }
+  HalFile input;
+  ASSERT_TRUE(input.open(path.c_str(), "rb"));
+  EXPECT_EQ(Page::deserialize(input), nullptr);
 }
 
 TEST_P(ChapterHtmlSlimParserTest, KeepsCssVerticalAlignAndInternalLinkMetadata) {
@@ -1356,7 +1371,9 @@ TEST_F(ChapterTableBorderTest, RichCellsPreserveParagraphStylesAndFollowingFlow)
   const char* expected[] = {"Firstcell", "Entryone", "Entrytwo", "Outside"};
   for (size_t i = 0; i < lines.size(); ++i) {
     EXPECT_STREQ(static_cast<const PageLine*>(lines[i])->getBlock()->wordText(0), expected[i]);
-    if (i > 0) EXPECT_GT(lines[i]->yPos, lines[i - 1]->yPos);
+    if (i > 0) {
+      EXPECT_GT(lines[i]->yPos, lines[i - 1]->yPos);
+    }
   }
   EXPECT_GE(lines[1]->xPos, 24);
   const auto& left = *static_cast<const PageLine*>(lines[1])->getBlock();

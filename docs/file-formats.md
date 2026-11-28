@@ -2,14 +2,17 @@
 
 These formats describe the SD-card cache files under `/.crosspoint/epub_<hash>/`.
 All POD fields are written in the ESP32 little-endian representation used by
-`Serialization.h`; strings are length-prefixed UTF-8.
+`Serialization.h`; strings are length-prefixed UTF-8 of at most 4096 bytes
+(`serialization::MAX_STRING_BYTES`). Readers reject a longer length as corrupt.
 
 ## `book.bin`
 
-### Version 10
+### Version 11
 
 `book.bin` stores EPUB metadata plus lookup tables for spine and TOC entries.
-The current firmware writes this version from `BookMetadataCache`.
+The current firmware writes this version from `BookMetadataCache`. Version 11
+caps every string at 4096 bytes: titles are cut at a UTF-8 boundary, and an
+href or anchor over the cap (TOC entries, cover, text reference) is stored empty.
 
 ImHex pattern:
 
@@ -18,8 +21,8 @@ import std.mem;
 import std.string;
 import std.core;
 
-#define EXPECTED_VERSION 10
-#define MAX_STRING_LENGTH 65535
+#define EXPECTED_VERSION 11
+#define MAX_STRING_LENGTH 4096
 
 struct String {
     u32 length [[hidden, comment("String byte length")]];
@@ -441,7 +444,7 @@ import std.string;
 import std.core;
 
 #define EXPECTED_VERSION 74
-#define MAX_STRING_LENGTH 65535
+#define MAX_STRING_LENGTH 4096
 #define FOOTNOTE_NUMBER_LEN 32
 #define FOOTNOTE_HREF_LEN 256
 

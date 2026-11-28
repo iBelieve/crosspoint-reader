@@ -1,6 +1,7 @@
 #pragma once
 #include <HalStorage.h>
 #include <Memory.h>
+#include <Serialization.h>
 
 #include <algorithm>
 #include <cstring>
@@ -77,6 +78,7 @@ class BufferedFileReader {
       : file(file), buf(makeUniqueNoThrow<uint8_t[]>(capacity)), cap(buf ? capacity : 0), bufStart(file.position()) {}
   BufferedFileReader(const BufferedFileReader&) = delete;
   BufferedFileReader& operator=(const BufferedFileReader&) = delete;
+  ~BufferedFileReader() = default;
 
   size_t read(void* dst, size_t len) {
     auto* p = static_cast<uint8_t*>(dst);
@@ -143,19 +145,24 @@ void readPod(BufferedFileReader& in, T& value) {
   in.read(&value, sizeof(T));
 }
 
+template <typename T>
+bool tryReadPod(BufferedFileReader& in, T& value) {
+  return in.read(&value, sizeof(T)) == sizeof(T);
+}
+
 inline void writeString(BufferedFileWriter& out, const std::string& s) {
-  const uint32_t len = s.size();
+  const uint32_t len = cappedStringLength(s);
   writePod(out, len);
   out.write(s.data(), len);
 }
 
-inline void readString(BufferedFileReader& in, std::string& s) {
-  uint32_t len;
-  readPod(in, len);
+// As the HalFile overload in Serialization.h, without the bytes-left check: the
+// allocation is still bounded by maxLength.
+inline bool tryReadString(BufferedFileReader& in, std::string& s, const size_t maxLength) {
+  uint32_t len = 0;
+  if (in.read(&len, sizeof(len)) != sizeof(len) || len > maxLength) return false;
   s.resize(len);
-  if (len > 0) {
-    in.read(&s[0], len);
-  }
+  return len == 0 || in.read(&s[0], len) == len;
 }
 
 }  // namespace serialization

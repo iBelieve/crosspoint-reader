@@ -11,9 +11,9 @@ cards (files.json), the COOP/COEP headers threads need on Cloudflare Pages
 
 import argparse
 import json
-from pathlib import Path
 import shutil
 import sys
+from pathlib import Path
 
 from sample_book import make_sample_epub
 

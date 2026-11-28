@@ -71,8 +71,8 @@ void applyValue(const ApplyContext* c, const uint16_t format, const Table& base,
   }
   if (format & VF_X_ADV_DEVICE) {
     if (useX) pos.xAdvance = satAdd(pos.xAdvance, deviceDelta(base.at(values.u16(o)), s.xPpem, s.xScale));
-    o += 2;
   }
+  // The Y advance device table, last in the record, is not applied.
 }
 
 void anchorPoint(const ApplyContext* c, const Table& anchor, float* x, float* y) {

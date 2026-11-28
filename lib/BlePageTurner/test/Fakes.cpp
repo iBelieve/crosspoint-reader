@@ -35,7 +35,7 @@ void hostLog(bool error, const char* format, va_list args) {
   vsnprintf(line, sizeof line, format, args);
   theHost.logs.push_back(std::string(error ? "ERR " : "INF ") + line);
 }
-void hostMap(const char* tag) { theHost.maps.push_back(tag); }
+void hostMap(const char* tag) { theHost.maps.emplace_back(tag); }
 const bleturner::Host kHost{hostHeap,    hostRelease, hostDeliver, hostYield, hostTransfer,
                             hostRestart, hostHold,    hostLog,     hostMap};
 }  // namespace

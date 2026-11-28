@@ -40,7 +40,7 @@ flake.*
 # Simulator smoke test output (test/simulator/smoke.py)
 /sim-artifacts/
 
-# Browser simulator site, smoke-test output and Playwright install
+# Browser simulator site and smoke-test output
 /sim-site/
 /sim-web-artifacts/
-/node_modules/
+node_modules/

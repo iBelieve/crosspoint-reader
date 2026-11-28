@@ -58,6 +58,7 @@ class Atkinson1BitDitherer {
 
   // EXPLICITLY DELETE THE COPY ASSIGNMENT OPERATOR
   Atkinson1BitDitherer& operator=(const Atkinson1BitDitherer& other) = delete;
+  ~Atkinson1BitDitherer() = default;
 
   uint8_t processPixel(int gray, int x) {
     if (!isValid()) return adjustPixel(gray) < 128 ? 0 : 1;
@@ -140,6 +141,7 @@ class AtkinsonDitherer {
 
   // **2. EXPLICITLY DELETE THE COPY ASSIGNMENT OPERATOR**
   AtkinsonDitherer& operator=(const AtkinsonDitherer& other) = delete;
+  ~AtkinsonDitherer() = default;
 
   uint8_t processPixel(int gray, int x) {
     // Add accumulated error
@@ -251,6 +253,7 @@ class FloydSteinbergDitherer {
 
   // **2. EXPLICITLY DELETE THE COPY ASSIGNMENT OPERATOR**
   FloydSteinbergDitherer& operator=(const FloydSteinbergDitherer& other) = delete;
+  ~FloydSteinbergDitherer() = default;
 
   // Process a single pixel and return quantized 2-bit value
   // x is the logical x position (0 to width-1), direction handled internally

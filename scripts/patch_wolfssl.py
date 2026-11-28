@@ -49,7 +49,9 @@ SHRINK_BEFORE = """    if (!forcedFree && (usedLength > STATIC_BUFFER_LEN ||
         return;
 """
 
-SHRINK_AFTER = SHRINK_BEFORE + """
+SHRINK_AFTER = (
+    SHRINK_BEFORE
+    + """
 #ifdef FREEINK_WOLFSSL_RETAIN_INPUT_BUFFER
     /* Keep only SecureClient's reservation; must equal kFullRecordCapacity. */
     if (!forcedFree && usedLength == 0 &&
@@ -62,6 +64,7 @@ SHRINK_AFTER = SHRINK_BEFORE + """
     }
 #endif
 """
+)
 
 GROW_BEFORE = """    if (usedLength < 0 || size < 0) {
         WOLFSSL_MSG("GrowInputBuffer() called with negative number");
@@ -69,7 +72,9 @@ GROW_BEFORE = """    if (usedLength < 0 || size < 0) {
     }
 """
 
-GROW_AFTER = GROW_BEFORE + """
+GROW_AFTER = (
+    GROW_BEFORE
+    + """
 #ifdef FREEINK_WOLFSSL_RELEASE_EMPTY_INPUT_BUFFER
     /* Free a fully read buffer first, so the old and new blocks do not coexist. */
     if (usedLength == 0 && ssl->buffers.inputBuffer.dynamicFlag &&
@@ -77,6 +82,7 @@ GROW_AFTER = GROW_BEFORE + """
         ShrinkInputBuffer(ssl, FORCED_FREE);
 #endif
 """
+)
 
 # The retained size above must match the SDK's reservation size.
 SDK_CAPACITY = "constexpr int kFullRecordCapacity = (1 << 14) + 256 + 64;"

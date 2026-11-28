@@ -9,8 +9,8 @@ If needed, see [Getting Started](./getting-started.md).
 
 ```sh
 ./bin/clang-format-fix
-pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
-pio run
+pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+pio run -e x4c
 ```
 
 ## Flash and monitor
@@ -18,7 +18,7 @@ pio run
 Flash firmware:
 
 ```sh
-pio run --target upload
+pio run -e x4c --target upload
 ```
 
 Open serial monitor:

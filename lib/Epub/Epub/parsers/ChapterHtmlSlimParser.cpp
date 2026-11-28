@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <iterator>
 #include <new>
 
@@ -469,7 +471,7 @@ void ChapterHtmlSlimParser::flushPendingAnchor() {
   }
 
   // Record deferred anchor after previous block is flushed (and any TOC page break)
-  anchorData.push_back({std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount)});
+  anchorData.emplace_back(std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount));
   pendingAnchorId.clear();
 }
 
@@ -1033,7 +1035,7 @@ void ChapterHtmlSlimParser::emitHorizontalRule(const BlockStyle& blockStyle) {
   currentPageNextY = static_cast<int16_t>(currentPageNextY + ruleThickness + bottomSpacing);
 
   if (!pendingAnchorId.empty()) {
-    anchorData.push_back({std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount)});
+    anchorData.emplace_back(std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount));
     pendingAnchorId.clear();
   }
 }
@@ -1677,7 +1679,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       if (!self->tableBorder.visible() && side->visible()) self->tableBorder = *side;
     }
     const char* borderAttr = getAttribute(atts, "border");
-    if (!self->tableBorder.visible() && borderAttr && atoi(borderAttr) > 0) {
+    if (!self->tableBorder.visible() && borderAttr && strtol(borderAttr, nullptr, 10) > 0) {
       self->tableBorder = CssBorderSide{1, CssBorderStyle::Solid};
     }
     self->depth += 1;
@@ -2014,7 +2016,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
                   self->breakPageCarryingLines(carry, 0, self->visibleTextOffset);
                   if (self->stopRequested) return;
                 } else if (!self->currentPage) {
-                  self->currentPage.reset(new Page());
+                  self->currentPage = makeUniqueNoThrow<Page>();
                   if (!self->currentPage) {
                     LOG_ERR("EHP", "Failed to create initial page");
                     return;
@@ -2093,7 +2095,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
         self->depth += 1;
         self->syntheticCharacterData = true;
-        self->characterData(userData, alt.c_str(), alt.length());
+        ChapterHtmlSlimParser::characterData(userData, alt.c_str(), alt.length());
         self->syntheticCharacterData = false;
         // Skip any child content (skip until parent as we pre-advanced depth above)
         self->skipUntilDepth = self->depth - 1;
@@ -2143,8 +2145,8 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   // Skip blocks with role="doc-pagebreak" and epub:type="pagebreak"
   if (atts != nullptr) {
     for (int i = 0; atts[i]; i += 2) {
-      if (strcmp(atts[i], "role") == 0 && strcmp(atts[i + 1], "doc-pagebreak") == 0 ||
-          strcmp(atts[i], "epub:type") == 0 && strcmp(atts[i + 1], "pagebreak") == 0) {
+      if ((strcmp(atts[i], "role") == 0 && strcmp(atts[i + 1], "doc-pagebreak") == 0) ||
+          (strcmp(atts[i], "epub:type") == 0 && strcmp(atts[i + 1], "pagebreak") == 0)) {
         self->skipUntilDepth = self->depth;
         self->depth += 1;
         return;
@@ -2183,7 +2185,13 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->footnoteLinkDepth = self->depth;
       self->currentFootnoteLinkId = self->currentTextBlock ? self->currentTextBlock->addLinkTarget(href) : 0;
       self->currentFootnote.href[0] = '\0';
-      if (self->currentFootnoteLinkId != 0) strcpy(self->currentFootnote.href, href);
+      if (self->currentFootnoteLinkId != 0) {
+        // addLinkTarget() accepted it, so it fits; bound the copy anyway.
+        char* const dst = self->currentFootnote.href;
+        const size_t len = strnlen(href, sizeof(self->currentFootnote.href) - 1);
+        memcpy(dst, href, len);
+        dst[len] = '\0';
+      }
       self->currentFootnote.number[0] = '\0';
       self->currentFootnoteLinkTextLen = 0;
 
@@ -2532,7 +2540,8 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     }
 
     // Extract footnote link text
-    for (int i = start; (self->currentFootnoteLinkTextLen < sizeof(self->currentFootnote.number) - 1) && (i <= end);
+    for (int i = start;
+         (self->currentFootnoteLinkTextLen < static_cast<int>(sizeof(self->currentFootnote.number)) - 1) && (i <= end);
          ++i) {
       self->currentFootnote.number[self->currentFootnoteLinkTextLen++] = s[i];
     }
@@ -2869,7 +2878,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
       entry.href[sizeof(entry.href) - 1] = '\0';
       int wordIndex =
           self->wordsExtractedInBlock + (self->currentTextBlock ? static_cast<int>(self->currentTextBlock->size()) : 0);
-      self->pendingFootnotes.push_back({wordIndex, entry});
+      self->pendingFootnotes.emplace_back(wordIndex, entry);
     }
     self->insideFootnoteLink = false;
     self->currentFootnoteLinkId = 0;
@@ -3180,7 +3189,7 @@ bool ChapterHtmlSlimParser::finishParse() {
       return false;
     }
     if (!pendingAnchorId.empty()) {
-      anchorData.push_back({std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount)});
+      anchorData.emplace_back(std::move(pendingAnchorId), static_cast<uint16_t>(completedPageCount));
       pendingAnchorId.clear();
     }
     setCurrentPageVisibleOffset(visibleTextOffset);

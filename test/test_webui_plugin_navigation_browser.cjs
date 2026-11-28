@@ -70,6 +70,11 @@ class CDP {
       if (data.error) reject(new Error(JSON.stringify(data.error)));
       else resolve(data.result);
     });
+    // A closed socket would otherwise leave calls pending forever.
+    socket.addEventListener('close', () => {
+      for (const {reject} of this.pending.values()) reject(new Error('CDP socket closed'));
+      this.pending.clear();
+    });
   }
   send(method, params = {}) {
     const id = ++this.id;
@@ -101,7 +106,7 @@ async function connect(port) {
 }
 
 test('Tab after jumping to a later plugin begins inside its card', {
-  timeout: 20000
+  timeout: 90000
 }, async t => {
   const browser = findBrowser();
   if (!browser) {
@@ -112,21 +117,32 @@ test('Tab after jumping to a later plugin begins inside its card', {
   const child = spawn(browser, [
     '--headless=new', '--disable-gpu', '--no-first-run',
     '--no-default-browser-check', '--disable-extensions',
-    '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'
-  ], {stdio: 'ignore', windowsHide: true});
+    '--remote-debugging-port=0', '--enable-logging=stderr', '--user-data-dir=' + profile, 'about:blank'
+  ], {
+    stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+    // Without a session bus Chrome waits for D-Bus calls to time out at startup.
+    env: {...process.env, DBUS_SESSION_BUS_ADDRESS: 'disabled:'}
+  });
+  // Kept so a failed start says why.
+  let stderr = '';
+  const keep = chunk => { stderr = (stderr + chunk).slice(-4000); };
+  child.stdout.on('data', keep);
+  child.stderr.on('data', keep);
+  // On a test timeout the finally block may never run, so stop Chrome here too.
+  t.signal.addEventListener('abort', () => child.kill('SIGKILL'), {once: true});
   let cdp;
   try {
     let port;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 600; i++) {
       const file = path.join(profile, 'DevToolsActivePort');
       if (fs.existsSync(file)) {
         port = Number(fs.readFileSync(file, 'utf8').split('\n')[0]);
         break;
       }
-      if (child.exitCode !== null) throw new Error('Headless browser exited before opening');
+      if (child.exitCode !== null) throw new Error('Headless browser exited before opening:\n' + stderr);
       await wait(100);
     }
-    assert.ok(port, 'headless browser failed to open debugging port');
+    assert.ok(port, 'headless browser failed to open debugging port:\n' + stderr);
     cdp = await connect(port);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
@@ -165,6 +181,9 @@ test('Tab after jumping to a later plugin begins inside its card', {
   } finally {
     if (cdp) cdp.close();
     child.kill();
-    try { fs.rmSync(profile, {recursive: true, force: true}); } catch {}
+    // A Chrome helper holding the pipes must not keep node alive.
+    child.stdout.destroy();
+    child.stderr.destroy();
+    try { fs.rmSync(profile, {recursive: true, force: true}); } catch { /* best-effort cleanup */ }
   }
 });

@@ -68,7 +68,9 @@ TEST(PluginPickerLayout, AllFiveEventsRemainReadableWithFirmwareFonts) {
     for (const int width : {240, 384, 480, 800}) {
       auto props = pickerProps();
       const int contentWidth = width - props.sidePadding * 2;
-      if (width <= 384) EXPECT_NE(wrapped(target, disclosure, props, contentWidth), disclosure);
+      if (width <= 384) {
+        EXPECT_NE(wrapped(target, disclosure, props, contentWidth), disclosure);
+      }
       fitPluginSubtitleToViewport(target, width < 480 ? 320 : 200, props);
       EXPECT_EQ(wrapped(target, disclosure, props, contentWidth), disclosure) << width;
     }

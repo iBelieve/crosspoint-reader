@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import struct
 import sys
 import zlib
@@ -104,9 +103,7 @@ def read_cpfont_styles(filepath: Path) -> list[str]:
             print(f"  WARNING: {filepath.name} too small, skipping", file=sys.stderr)
             return []
 
-        magic, version, _flags, style_count = struct.unpack(
-            GLOBAL_HEADER_FORMAT, header_data
-        )
+        magic, version, _flags, style_count = struct.unpack(GLOBAL_HEADER_FORMAT, header_data)
 
         if magic != CPFONT_MAGIC:
             print(
@@ -180,9 +177,7 @@ def scan_cpfont_files(input_dir: Path) -> dict[str, list[Path]]:
     return families
 
 
-def build_manifest(
-    families: dict[str, list[Path]], base_url: str
-) -> dict:
+def build_manifest(families: dict[str, list[Path]], base_url: str) -> dict:
     """Build the manifest dict from discovered font families."""
     manifest_families = []
     used_script_tags: set[str] = set()
@@ -230,11 +225,7 @@ def build_manifest(
     # Top-level script-group display metadata (tag + English label), emitted in
     # catalog order and limited to groups actually used by ≥1 family. The device
     # is fully data-driven from this — it holds no hardcoded script list.
-    script_groups = [
-        {"tag": tag, "label": label}
-        for tag, label in SCRIPT_GROUPS
-        if tag in used_script_tags
-    ]
+    script_groups = [{"tag": tag, "label": label} for tag, label in SCRIPT_GROUPS if tag in used_script_tags]
 
     return {
         "version": FONTS_MANIFEST_VERSION,
@@ -245,9 +236,7 @@ def build_manifest(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate fonts.json manifest from .cpfont files"
-    )
+    parser = argparse.ArgumentParser(description="Generate fonts.json manifest from .cpfont files")
     parser.add_argument(
         "--input",
         required=True,

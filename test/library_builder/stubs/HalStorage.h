@@ -84,7 +84,7 @@ inline void add(const std::string& path, const std::string& bytes = "book", cons
   files[path] = node;
   std::string parent = path.substr(0, path.find_last_of('/'));
   if (parent.empty()) parent = "/";
-  if (!files.count(parent)) {
+  if (!files.contains(parent)) {
     add(parent, "");
     files[parent]->directory = true;
   }
@@ -138,8 +138,9 @@ class HalFile {
   size_t getName(char* out, const size_t size) {
     const std::string name = path.substr(path.find_last_of('/') + 1);
     if (size > 0) {
-      std::strncpy(out, name.c_str(), size);
-      out[size - 1] = '\0';
+      const size_t n = std::min(name.size(), size - 1);
+      std::memcpy(out, name.data(), n);
+      out[n] = '\0';
     }
     return name.size();
   }
@@ -171,6 +172,7 @@ class HalFile {
     if (size == 0) return 0;
     if (!node || fake::fail(fake::failRead)) return -1;
     size = std::min(size, node->bytes.size() - std::min(pos, node->bytes.size()));
+    if (size == 0) return 0;  // bytes.data() may be null
     std::memcpy(out, node->bytes.data() + std::min(pos, node->bytes.size()), size);
     pos += size;
     return static_cast<int>(size);
@@ -203,7 +205,7 @@ class HalStorage {
     return storage;
   }
 
-  bool exists(const char* path) const { return fake::files.count(path) != 0; }
+  bool exists(const char* path) const { return fake::files.contains(path); }
   bool mkdir(const char* path) {
     if (!exists(path)) fake::add(path, "");
     fake::files[path]->directory = true;

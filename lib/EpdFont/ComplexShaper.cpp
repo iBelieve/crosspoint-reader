@@ -354,15 +354,15 @@ ComplexShaper* gShapers = nullptr;
 // One font's tables and shaping plans, shared by every shaper whose source
 // carries the same font.
 struct SharedFace {
-  uint32_t key;                  // 0 = private to one shaper
+  uint32_t key = 0;              // 0 = private to one shaper
   ComplexShaper::Blob blob;      // whole layout font (blob sources)
   uint8_t* tables[kTableCount];  // loaded tables (table sources), from allocate()
   ot::Face face;
   // Fills a plan for this face: read from the font (blobs) or built (tables).
-  bool (*makePlan)(ot::Plan& plan, const ot::Face& face, ot::Script script, const uint32_t* languageTags);
+  bool (*makePlan)(ot::Plan& plan, const ot::Face& face, ot::Script script, const uint32_t* languageTags) = nullptr;
   ot::Plan* plans[indic::SCRIPT_COUNT];  // made on demand in the document language
-  uint16_t users;
-  SharedFace* next;
+  uint16_t users = 0;
+  SharedFace* next = nullptr;
 };
 
 namespace {
@@ -924,6 +924,7 @@ void ComplexShaper::beginMemo() {
 
 void ComplexShaper::endMemo() {
   std::lock_guard<std::recursive_mutex> lock(shaperMutex());
-  if (gMemoDepth == 0 || --gMemoDepth != 0) return;
+  if (gMemoDepth == 0) return;
+  if (--gMemoDepth != 0) return;
   memoFree();
 }

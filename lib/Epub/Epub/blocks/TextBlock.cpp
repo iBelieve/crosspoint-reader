@@ -328,7 +328,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
   }
 
   struct DecorationLineTracker {
-    EpdFontFamily::Style style;
+    EpdFontFamily::Style style{};
     int startX = -1;
     int endX = -1;
     int yPos = 0;
@@ -566,18 +566,20 @@ bool TextBlock::serialize(HalFile& file) const {
 }
 
 std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
-  uint16_t wc;
-  uint8_t flags;
-  uint16_t textBytes;
-  uint16_t paragraphStartWord;
+  uint16_t wc = 0;
+  uint8_t flags = 0;
+  uint16_t textBytes = 0;
+  uint16_t paragraphStartWord = 0;
   uint16_t displayBytes = 0;
-  serialization::readPod(file, wc);
-  serialization::readPod(file, flags);
-  serialization::readPod(file, textBytes);
-  serialization::readPod(file, paragraphStartWord);
+  if (!serialization::tryReadPod(file, wc) || !serialization::tryReadPod(file, flags) ||
+      !serialization::tryReadPod(file, textBytes) || !serialization::tryReadPod(file, paragraphStartWord)) {
+    LOG_ERR("TXB", "Deserialization failed: truncated header");
+    return nullptr;
+  }
   const bool hasDisplay = (flags & FLAG_DISPLAY) != 0;
-  if (hasDisplay) {
-    serialization::readPod(file, displayBytes);
+  if (hasDisplay && !serialization::tryReadPod(file, displayBytes)) {
+    LOG_ERR("TXB", "Deserialization failed: truncated header");
+    return nullptr;
   }
   if ((flags & ~(FLAG_FOCUS | FLAG_DISPLAY)) != 0 || (hasDisplay && wc == 0)) {
     LOG_ERR("TXB", "Deserialization failed: bad flags 0x%02X", flags);
@@ -614,7 +616,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
       LOG_ERR("TXB", "OOM: arena %u bytes", static_cast<uint32_t>(size));
       return nullptr;
     }
-    if (file.read(block->arena.get(), size) != size) {
+    if (file.read(block->arena.get(), size) != static_cast<int>(size)) {
       LOG_ERR("TXB", "Deserialization failed: arena read (%u bytes)", static_cast<uint32_t>(size));
       return nullptr;
     }
@@ -663,39 +665,45 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   // other reader is guarded by `i < rubyTexts.size()`, so allocate lazily and only once a
   // non-empty annotation actually shows up.
   //
-  // `scratch` is reused across words: readString() resizes it to the incoming length and
-  // overwrites every byte, so a moved-from value carries nothing into the next iteration.
+  // `scratch` is reused across words; swapping hands its buffer to the block and takes back
+  // the empty string that was there.
   std::string scratch;
   for (uint16_t i = 0; i < wc; i++) {
-    serialization::readString(file, scratch);
+    if (!serialization::tryReadString(file, scratch, serialization::MAX_STRING_BYTES)) {
+      LOG_ERR("TXB", "Deserialization failed: ruby text %u", static_cast<unsigned>(i));
+      return nullptr;
+    }
     if (scratch.empty()) continue;
     if (block->rubyTexts.empty()) {
       block->rubyTexts.resize(wc);
     }
-    block->rubyTexts[i] = std::move(scratch);
+    block->rubyTexts[i].swap(scratch);
   }
 
   // Style (alignment + margins/padding/indent)
   BlockStyle& blockStyle = block->blockStyle;
-  serialization::readPod(file, blockStyle.alignment);
-  serialization::readPod(file, blockStyle.textAlignDefined);
-  serialization::readPod(file, blockStyle.marginTop);
-  serialization::readPod(file, blockStyle.marginBottom);
-  serialization::readPod(file, blockStyle.marginLeft);
-  serialization::readPod(file, blockStyle.marginRight);
-  serialization::readPod(file, blockStyle.paddingTop);
-  serialization::readPod(file, blockStyle.paddingBottom);
-  serialization::readPod(file, blockStyle.paddingLeft);
-  serialization::readPod(file, blockStyle.paddingRight);
-  serialization::readPod(file, blockStyle.textIndent);
-  serialization::readPod(file, blockStyle.textIndentDefined);
-  serialization::readPod(file, blockStyle.isRtl);
-  serialization::readPod(file, blockStyle.directionDefined);
-  serialization::readPod(file, blockStyle.characterSpacing);
-  serialization::readPod(file, blockStyle.fontId);
-
   uint8_t hasWordFonts = 0;
-  serialization::readPod(file, hasWordFonts);
+  const bool styleRead = serialization::tryReadPod(file, blockStyle.alignment) &&
+                         serialization::tryReadPod(file, blockStyle.textAlignDefined) &&
+                         serialization::tryReadPod(file, blockStyle.marginTop) &&
+                         serialization::tryReadPod(file, blockStyle.marginBottom) &&
+                         serialization::tryReadPod(file, blockStyle.marginLeft) &&
+                         serialization::tryReadPod(file, blockStyle.marginRight) &&
+                         serialization::tryReadPod(file, blockStyle.paddingTop) &&
+                         serialization::tryReadPod(file, blockStyle.paddingBottom) &&
+                         serialization::tryReadPod(file, blockStyle.paddingLeft) &&
+                         serialization::tryReadPod(file, blockStyle.paddingRight) &&
+                         serialization::tryReadPod(file, blockStyle.textIndent) &&
+                         serialization::tryReadPod(file, blockStyle.textIndentDefined) &&
+                         serialization::tryReadPod(file, blockStyle.isRtl) &&
+                         serialization::tryReadPod(file, blockStyle.directionDefined) &&
+                         serialization::tryReadPod(file, blockStyle.characterSpacing) &&
+                         serialization::tryReadPod(file, blockStyle.fontId) &&
+                         serialization::tryReadPod(file, hasWordFonts);
+  if (!styleRead) {
+    LOG_ERR("TXB", "Deserialization failed: truncated block style");
+    return nullptr;
+  }
   if (hasWordFonts > 1) {
     LOG_ERR("TXB", "Deserialization failed: bad word font flag %u", hasWordFonts);
     return nullptr;
@@ -703,7 +711,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   if (hasWordFonts) {
     const size_t size = sizeof(int32_t) * MAX_WORD_FONTS + wc;
     block->wordFontData = makeUniqueNoThrow<uint8_t[]>(size);
-    if (!block->wordFontData || file.read(block->wordFontData.get(), size) != size) {
+    if (!block->wordFontData || file.read(block->wordFontData.get(), size) != static_cast<int>(size)) {
       LOG_ERR("TXB", "Deserialization failed: word fonts");
       return nullptr;
     }

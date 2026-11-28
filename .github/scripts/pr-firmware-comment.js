@@ -37,7 +37,8 @@ module.exports = async ({github, context, core}) => {
     return;
   }
 
-  const builds = [
+  // Keep in sync with the all-boards matrix in ci.yml.
+  const allBuilds = [
     { env: 'default', name: 'firmware.bin', device: 'X3 / X4' },
     { env: 'sticky', name: 'firmware-sticky.bin', device: 'Sticky' },
     { env: 'x4pro', name: 'firmware-x4pro.bin', device: 'X4 Pro' },
@@ -48,6 +49,17 @@ module.exports = async ({github, context, core}) => {
     { env: 'picco', name: 'firmware-picco.bin', device: 'BOOX Picco' },
     { env: 'onepage', name: 'firmware-onepage.bin', device: 'OnePage' },
   ];
+  // CI builds some boards only on request, so list only boards this run built.
+  let built = null;
+  try {
+    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+      owner, repo, run_id: run.id, filter: 'latest', per_page: 100,
+    });
+    const names = jobs.filter(job => job.conclusion !== 'skipped').map(job => job.name);
+    if (names.length) built = new Set(names);
+  } catch (error) {
+    core.warning(`Could not list build jobs: ${error.message}`);
+  }
   const artifactResponse =
     await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
       owner,
@@ -60,6 +72,9 @@ module.exports = async ({github, context, core}) => {
       .filter((artifact) => !artifact.expired)
       .map((artifact) => [artifact.name, artifact]),
   );
+  // x4c builds on every run. Without the job list, add boards that uploaded anything.
+  const builds = allBuilds.filter(build => build.env === 'x4c' || (built ? built.has(`Build ${build.env}`)
+    : artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`)));
   const missingBuilds = builds.filter((build) => !artifacts.has(build.name));
   const shortSha = run.head_sha.slice(0, 7);
   let body = `${marker}\n### Firmware builds\n\n`;
@@ -89,14 +104,19 @@ module.exports = async ({github, context, core}) => {
       comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker),
   );
 
-  // A delayed completion or rerun must not replace a newer run for this head.
+  // A delayed completion or rerun must not replace a newer finished run for this
+  // head. A newer run still running, or cancelled, does not count: one that
+  // finishes later overwrites this comment. A cancelled run yields to any newer
+  // run, so a queued run replaced before it started does not blank the comment.
   const latestRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
     owner, repo, workflow_id: run.workflow_id, event: 'pull_request',
     head_sha: run.head_sha, per_page: 100,
   });
-  if (latestRuns.some(candidate => candidate.head_repository?.id === run.head_repository.id &&
-      candidate.head_branch === run.head_branch &&
-      (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)))) {
+  const supersedes = candidate => candidate.head_repository?.id === run.head_repository.id &&
+    candidate.head_branch === run.head_branch &&
+    (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)) &&
+    (run.conclusion === 'cancelled' || (candidate.status === 'completed' && candidate.conclusion !== 'cancelled'));
+  if (latestRuns.some(supersedes)) {
     core.notice('Skipping superseded run or attempt.');
     return;
   }

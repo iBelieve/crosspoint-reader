@@ -73,7 +73,7 @@ bool FontCacheManager::prewarmCache(int fontId, const char* utf8Text, uint8_t st
   }
 
   // Standard compressed font prewarm path: loop over all requested styles
-  if (!fontDecompressor_ || fontMap_.count(fontId) == 0) return true;
+  if (!fontDecompressor_ || !fontMap_.contains(fontId)) return true;
 
   for (uint8_t i = 0; i < 4; i++) {
     if (!(styleMask & (1 << i))) continue;

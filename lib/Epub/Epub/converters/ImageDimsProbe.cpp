@@ -35,7 +35,7 @@ bool ImageDimsProbe::feed(const uint8_t b) {
           return false;
         }
       } else if (pos >= 12 && pos < 16) {
-        if (b != "IHDR"[pos - 12]) {
+        if (b != static_cast<uint8_t>("IHDR"[pos - 12])) {
           state = State::Failed;
           return false;
         }
@@ -53,7 +53,8 @@ bool ImageDimsProbe::feed(const uint8_t b) {
       return true;
 
     case State::GifHeader:
-      if ((pos < 4 && b != "GIF8"[pos]) || (pos == 4 && b != '7' && b != '9') || (pos == 5 && b != 'a')) {
+      if ((pos < 4 && b != static_cast<uint8_t>("GIF8"[pos])) || (pos == 4 && b != '7' && b != '9') ||
+          (pos == 5 && b != 'a')) {
         state = State::Failed;
         return false;
       }

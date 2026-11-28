@@ -190,7 +190,7 @@ TEST_F(CssParserTest, FontInheritanceSurvivesCascadeAndCacheRoundTrip) {
   CssParser reader(cachePath());
   ASSERT_EQ(reader.loadFromCache(), CssParser::CacheLoadResult::Complete);
   for (const auto* parser : {&writer, &reader}) {
-    for (const auto style : {parser->resolveStyle("p", "inherited", "inherited"), parser->resolveStyle("p", "last")}) {
+    for (const auto& style : {parser->resolveStyle("p", "inherited", "inherited"), parser->resolveStyle("p", "last")}) {
       EXPECT_TRUE(style.hasFontStyle());
       EXPECT_TRUE(style.hasFontWeight());
       EXPECT_EQ(style.fontStyle, CssFontStyle::Inherit);
@@ -710,7 +710,9 @@ TEST_F(CssParserTest, RejectsFontFacePathsExceedingCacheLimit) {
 
     const auto& faces = writer.fontFaces();
     ASSERT_EQ(faces.size(), pathLength == 255u ? 2u : 1u);
-    if (pathLength == 255u) EXPECT_EQ(faces.front().href, baseDir + url);
+    if (pathLength == 255u) {
+      EXPECT_EQ(faces.front().href, baseDir + url);
+    }
     EXPECT_EQ(faces.back().href, baseDir + "short.otf");
 
     ASSERT_TRUE(writer.saveFontFaces());

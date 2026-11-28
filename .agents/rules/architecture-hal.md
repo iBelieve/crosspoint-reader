@@ -57,7 +57,7 @@ Member handles close at the intended release point, such as `onExit()`.
 
 ### Framebuffer ownership
 
-The C3 baseline has one panel-sized framebuffer. For temporary grayscale
+Every board runs with one panel-sized framebuffer (`EINK_DISPLAY_SINGLE_BUFFER_MODE`). For temporary grayscale
 overlays, pair successful `storeBwBuffer()` with `restoreBwBuffer()` or discard
 when the underlying page changed. Backups are chunked; do not add a second
 full-screen buffer. Use renderer/display capabilities for strip grayscale.

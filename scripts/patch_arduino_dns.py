@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-
 BEFORE = """    hasGlobalV6 = hasGlobalV6Now;
     hasGlobalV4 = hasGlobalV4Now;
     dns_clear_cache();"""

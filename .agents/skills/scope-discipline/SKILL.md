@@ -22,10 +22,12 @@ order:
    "Might be useful" is not a requirement.
 3. **What resources does it need?** Account for steady-state and peak RAM,
    the largest required heap block, Flash/OTA slot headroom, and SD storage.
-   Keep shared code within the C3 baseline. Check internal RAM and PSRAM
-   separately for the selected board. Label estimates and measurements, and
-   leave missing measurements pending. Use `scripts/firmware_size_history.py`
-   and `scripts/script_profile_mem.sh` for build footprint comparisons.
+   Budget against `x4c`, and leave a feature out of boards it does not fit
+   (see the [resource target](../../rules/hardware-resources.md#resource-target)).
+   Check internal RAM and PSRAM separately for the selected board. Label estimates and measurements, and
+   leave missing measurements pending. Use `scripts/firmware_size_history.py
+   --env x4c` for build footprint comparisons. `scripts/script_profile_mem.sh`
+   reads only the `default` (C3) build.
    Runtime heap and power claims require device measurements.
 4. **Can an existing mechanism meet the requirement?** Follow the reuse ladder
    below before adding a code path.

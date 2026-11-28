@@ -379,7 +379,7 @@ bool matchesQuery(const std::string_view haystack, const std::string_view needle
 }
 
 std::string surnameKey(const std::string_view displayAuthor) {
-  const std::string folded = fold(displayAuthor);
+  std::string folded = fold(displayAuthor);
   if (folded.empty()) return {};
 
   // fold() defers its spaces, so the result has no leading, trailing or repeated

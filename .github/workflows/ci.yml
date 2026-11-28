@@ -4,6 +4,18 @@ on:
   push:
     branches: [develop]
   pull_request:
+    # `labeled` lets the all-boards label start a run without a new push.
+    # Adding any label, even on a closed PR, starts a full run. Removing a
+    # label starts none, and re-runs reuse the original labels.
+    types: [opened, synchronize, reopened, labeled]
+
+# A new push to a PR cancels its run in progress. Other events queue behind
+# it instead, since cancelling fails Test Status on that SHA; a newer queued
+# run replaces an older queued one. Re-runs get their own group so a re-run of
+# an old commit cannot replace the current head's queued run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}${{ github.run_attempt > 1 && format('-rerun-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' && github.run_attempt == 1 }}
 
 permissions:
   contents: read
@@ -65,8 +77,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-v2-${{ runner.os }}-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
-          restore-keys: pio-v2-${{ runner.os }}-
+          key: pio-v3-${{ runner.os }}-cppcheck-x4c-${{ hashFiles('platformio.ini', 'scripts/patch_pioarduino_cache.py') }}
+          restore-keys: pio-v3-${{ runner.os }}-cppcheck-x4c-
 
       - name: Install cppcheck runtime dependency
         run: |
@@ -84,7 +96,36 @@ jobs:
           fi
 
       - name: Run cppcheck
-        run: pio check --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+        run: pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high
+
+  clang-tidy:
+    name: clang-tidy (${{ matrix.shard }}/2)
+    # The compile database is made with the image's Clang (18), like the Clang unit-test build.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every source on one four-core runner takes about 15 minutes.
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install clang-tidy-21
+        run: pip install clang-tidy==21.1.6
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake zlib1g-dev
+
+      - name: Run clang-tidy
+        run: ./bin/clang-tidy-check --shard ${{ matrix.shard }}/2
 
   build:
     name: Build ${{ matrix.env }}
@@ -92,27 +133,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Short board-specific names keep pull-request artifacts easy to identify.
-        # The release workflow applies the published crosspoint-<version>-<device>.bin names.
-        include:
-          - env: default
-            asset: firmware.bin
-          - env: sticky
-            asset: firmware-sticky.bin
-          - env: x4pro
-            asset: firmware-x4pro.bin
-          - env: x4c
-            asset: firmware-x4c.bin
-          - env: papermono
-            asset: firmware-papermono.bin
-          - env: metalio_eink4
-            asset: firmware-metalio_eink4.bin
-          - env: eego_a4
-            asset: firmware-eego_a4.bin
-          - env: picco
-            asset: firmware-picco.bin
-          - env: onepage
-            asset: firmware-onepage.bin
+        # The owner's device, x4c (X4 Classic), builds on every run. The rest
+        # build only on PRs with the all-boards label, for example before
+        # sending work upstream. pr-firmware-comment.js assumes x4c always builds.
+        env: ${{ fromJSON(contains(github.event.pull_request.labels.*.name, 'all-boards') && '["x4c","default","sticky","x4pro","papermono","metalio_eink4","eego_a4","picco","onepage"]' || '["x4c"]') }}
+    env:
+      # Short board-specific names keep pull-request artifacts easy to identify.
+      # The release workflow applies the published crosspoint-<version>-<device>.bin names.
+      ASSET: ${{ matrix.env == 'default' && 'firmware.bin' || format('firmware-{0}.bin', matrix.env) }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -169,7 +197,7 @@ jobs:
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.asset }}
+          name: ${{ env.ASSET }}
           path: .pio/build/${{ matrix.env }}/firmware.bin
           if-no-files-found: error
 
@@ -201,16 +229,43 @@ jobs:
           if-no-files-found: error
 
   unit-tests:
-    runs-on: ubuntu-latest
+    name: Unit tests (${{ matrix.cc }})
+    # Warnings fail this build, so pin the image and its compilers (GCC 13, Clang 18).
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Warnings fail the host build, and GCC and Clang warn differently.
+        include:
+          - cc: gcc-13
+            cxx: g++-13
+          - cc: clang-18
+            cxx: clang++-18
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
 
+      # The browser test needs Node 22's global WebSocket.
+      - uses: actions/setup-node@v4
+        if: matrix.cc == 'gcc-13'
+        with:
+          node-version: '22'
+
       - name: Test firmware comment and measurements
+        if: matrix.cc == 'gcc-13'
         run: |
           python3 -m unittest discover -s test -p test_firmware_stats.py
           node --test test/firmware_comment.test.js
+
+      - name: Test web UI plugin navigation
+        if: matrix.cc == 'gcc-13'
+        timeout-minutes: 5
+        # Ubuntu 24.04's AppArmor can block the user namespaces Chrome's sandbox needs.
+        # The browser test uses the runner's preinstalled Chrome and skips without it.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          node --test test/test_webui_plugin_navigation.cjs test/test_webui_plugin_navigation_browser.cjs
 
       - name: Install build tools
         run: |
@@ -224,6 +279,9 @@ jobs:
           key: ${{ runner.os }}-googletest-${{ hashFiles('test/CMakeLists.txt') }}
 
       - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: cmake -S test -B build/test -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
@@ -232,9 +290,75 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build/test --output-on-failure -j
 
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Lint Python
+        run: uvx ruff@0.16.9 check --output-format=github .
+
+      - name: Check Python formatting
+        run: uvx ruff@0.16.9 format --check --diff .
+
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install lint tools
+        run: npm ci
+
+      - name: Lint JavaScript
+        run: npx eslint .
+  # The host tests under AddressSanitizer (with leak checks) and UndefinedBehaviorSanitizer.
+  # The parsers read untrusted EPUB, ZIP and XML input; any sanitizer report fails a test.
+  sanitizers:
+    name: Unit tests (ASan + UBSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build zlib1g-dev
+
+      - name: Configure
+        env:
+          CC: gcc
+          CXX: g++
+        # Instrumented code makes GCC emit false flow warnings; the unit-tests jobs enforce warnings.
+        run: >-
+          cmake -S test -B build/sanitize -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCROSSPOINT_SANITIZERS=ON -DCROSSPOINT_WERROR=OFF
+
+      - name: Build
+        run: cmake --build build/sanitize
+
+      - name: Run tests
+        env:
+          ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: ctest --test-dir build/sanitize --output-on-failure -j
+
   simulator-smoke:
     name: Simulator smoke test
-    runs-on: ubuntu-latest
+    # The host compiler shapes this build (GCC 15 C23 fixes); bump deliberately.
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -281,9 +405,13 @@ jobs:
     needs:
       - build
       - clang-format
+      - clang-tidy
       - cppcheck
+      - eslint
+      - ruff
       - simulator-smoke
       - unit-tests
+      - sanitizers
     if: always()
     runs-on: ubuntu-latest
     steps:

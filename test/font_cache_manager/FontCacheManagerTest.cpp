@@ -32,6 +32,13 @@ void* operator new(const size_t size) {
   throw std::bad_alloc();
 }
 
+// Memory from the nothrow form (std::stable_sort's buffer) is freed by the plain
+// delete below, so both must use malloc; ASan reports a mismatch otherwise.
+void* operator new(const size_t size, const std::nothrow_t&) noexcept {
+  if (countHeapAllocations) heapAllocationCount++;
+  return std::malloc(size);
+}
+
 void operator delete(void* allocation) noexcept { std::free(allocation); }
 
 void operator delete(void* allocation, size_t) noexcept { std::free(allocation); }

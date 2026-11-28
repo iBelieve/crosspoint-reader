@@ -8,7 +8,11 @@ thread_local int rowAllocationToFail = -1;
 
 // Fail one row allocation without changing production allocator APIs.
 void* operator new[](std::size_t size, const std::nothrow_t&) noexcept {
-  if (rowAllocationToFail >= 0 && rowAllocationToFail-- == 0) return nullptr;
+  if (rowAllocationToFail == 0) {
+    rowAllocationToFail = -1;
+    return nullptr;
+  }
+  if (rowAllocationToFail > 0) rowAllocationToFail--;
   return ::operator new[](size);
 }
 
@@ -56,7 +60,9 @@ TEST(AbsoluteGrayscale, OverlayStillLeavesBlackAndWhiteToTheBase) {
   for (unsigned p = 0; p < 2; ++p) {
     for (unsigned x = 0; x < 8; ++x) {
       const auto pixel = grayPlanePixel(x % 4, p == 1, false);
-      if (x % 4 == 0 || x % 4 == 3) EXPECT_FALSE(pixel.write);
+      if (x % 4 == 0 || x % 4 == 3) {
+        EXPECT_FALSE(pixel.write);
+      }
       if (pixel.write && !pixel.black) planes[p] |= 0x80 >> x;
     }
   }

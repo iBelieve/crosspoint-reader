@@ -37,11 +37,11 @@ constexpr Span<T> span(const T (&array)[N]) {
 
 struct ScriptRules {
   Span<CodepointRange> consonants;
-  uint32_t ra;  // forms the reph when it starts a cluster
+  uint32_t ra = 0;  // forms the reph when it starts a cluster
   // Whether a bare virama binds the next consonant into the cluster. Tamil
   // and Sinhala show the virama and start a new syllable unless a ZWJ asks
   // for a conjunct.
-  bool viramaJoins;
+  bool viramaJoins = false;
   Span<PreBaseVowel> preBaseVowels;
   Span<NuktaLetter> nuktaLetters;
 };

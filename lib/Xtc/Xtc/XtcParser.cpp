@@ -113,7 +113,7 @@ bool XtcParser::ensureFileOpen() {
   if (m_file.isOpen()) {
     return true;
   }
-  return Storage.openFileForRead("XTC", m_filepath.c_str(), m_file);
+  return Storage.openFileForRead("XTC", m_filepath, m_file);
 }
 
 void XtcParser::closeFile() {
@@ -141,8 +141,8 @@ XtcError XtcParser::readHeader() {
   // Check version
   // Currently, version 1.0 is the only valid version, however some generators are swapping the bytes around, so we
   // accept both 1.0 and 0.1 for compatibility
-  const bool validVersion = m_header.versionMajor == 1 && m_header.versionMinor == 0 ||
-                            m_header.versionMajor == 0 && m_header.versionMinor == 1;
+  const bool validVersion = (m_header.versionMajor == 1 && m_header.versionMinor == 0) ||
+                            (m_header.versionMajor == 0 && m_header.versionMinor == 1);
   if (!validVersion) {
     LOG_DBG("XTC", "Unsupported version: %u.%u", m_header.versionMajor, m_header.versionMinor);
     return XtcError::INVALID_VERSION;
@@ -213,7 +213,7 @@ XtcError XtcParser::readFirstPageInfo() {
   // Read only the first entry to get default page dimensions
   // All other entries are read on-demand via readPageTableEntry()
   // This avoids allocating pageCount * 16 bytes (e.g. 65KB for 4000+ pages)
-  PageTableEntry entry;
+  PageTableEntry entry{};
   if (!m_file.seek64(m_header.pageTableOffset)) {
     LOG_DBG("XTC", "Failed to seek to page table at %llu", m_header.pageTableOffset);
     return XtcError::READ_ERROR;
@@ -259,7 +259,7 @@ bool XtcParser::readPageTableEntry(uint32_t pageIndex, PageInfo& info) {
     return false;
   }
 
-  PageTableEntry entry;
+  PageTableEntry entry{};
   size_t bytesRead = m_file.read(reinterpret_cast<uint8_t*>(&entry), sizeof(PageTableEntry));
   if (bytesRead != sizeof(PageTableEntry)) {
     LOG_DBG("XTC", "Failed to read page table entry %lu", pageIndex);
@@ -412,7 +412,7 @@ size_t XtcParser::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSiz
     return 0;
   }
 
-  PageInfo page;
+  PageInfo page{};
   if (!readPageTableEntry(pageIndex, page)) {
     m_lastError = XtcError::READ_ERROR;
     return 0;
@@ -431,7 +431,7 @@ size_t XtcParser::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSiz
   }
 
   // Read page header (XTG for 1-bit, XTH for 2-bit - same structure)
-  XtgPageHeader pageHeader;
+  XtgPageHeader pageHeader{};
   size_t headerRead = m_file.read(reinterpret_cast<uint8_t*>(&pageHeader), sizeof(XtgPageHeader));
   if (headerRead != sizeof(XtgPageHeader)) {
     LOG_DBG("XTC", "Failed to read page header for page %u", pageIndex);
@@ -484,9 +484,9 @@ size_t XtcParser::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSiz
   return bytesRead;
 }
 
-XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
-                                      std::function<void(const uint8_t* data, size_t size, size_t offset)> callback,
-                                      size_t chunkSize) {
+XtcError XtcParser::loadPageStreaming(
+    uint32_t pageIndex, const std::function<void(const uint8_t* data, size_t size, size_t offset)>& callback,
+    size_t chunkSize) {
   if (!m_isOpen) {
     return XtcError::FILE_NOT_FOUND;
   }
@@ -495,7 +495,7 @@ XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
     return XtcError::PAGE_OUT_OF_RANGE;
   }
 
-  PageInfo page;
+  PageInfo page{};
   if (!readPageTableEntry(pageIndex, page)) {
     return XtcError::READ_ERROR;
   }
@@ -510,7 +510,7 @@ XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
   }
 
   // Read and skip page header (XTG for 1-bit, XTH for 2-bit)
-  XtgPageHeader pageHeader;
+  XtgPageHeader pageHeader{};
   size_t headerRead = m_file.read(reinterpret_cast<uint8_t*>(&pageHeader), sizeof(XtgPageHeader));
   const uint32_t expectedMagic = (m_bitDepth == 2) ? XTH_MAGIC : XTG_MAGIC;
   if (headerRead != sizeof(XtgPageHeader) || pageHeader.magic != expectedMagic) {
@@ -539,14 +539,15 @@ XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
 
   while (totalRead < bitmapSize) {
     size_t toRead = std::min(chunkSize, bitmapSize - totalRead);
-    size_t bytesRead = m_file.read(chunk.data(), toRead);
+    const int bytesRead = m_file.read(chunk.data(), toRead);
 
-    if (bytesRead == 0) {
+    // read() returns -1 on an SD error.
+    if (bytesRead <= 0) {
       return XtcError::READ_ERROR;
     }
 
-    callback(chunk.data(), bytesRead, totalRead);
-    totalRead += bytesRead;
+    callback(chunk.data(), static_cast<size_t>(bytesRead), totalRead);
+    totalRead += static_cast<size_t>(bytesRead);
   }
 
   return XtcError::OK;

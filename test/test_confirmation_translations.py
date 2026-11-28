@@ -1,11 +1,12 @@
 """Confirmation headings are translated questions, not concatenated button labels."""
-from pathlib import Path
+
 import sys
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from gen_i18n import parse_yaml_file
+from gen_i18n import parse_yaml_file  # noqa: E402 - needs the sys.path entry above
 
 
 class ConfirmationTranslationsTest(unittest.TestCase):

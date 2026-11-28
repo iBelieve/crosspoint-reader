@@ -41,9 +41,11 @@ owner will use on the device regularly.
 The hardware is the same as upstream's, so the technical rules in
 [`.agents/rules/`](.agents/rules/) still apply in full:
 
-* **Memory:** the ESP32-C3 has about 380 KB usable RAM and no PSRAM. A new app
-  must fit next to the reader core and must release its memory when it exits.
-  See [hardware-resources.md](.agents/rules/hardware-resources.md).
+* **Memory:** apps target the X4 Classic (`x4c`) and may use its PSRAM. A new
+  app must fit next to the reader core and must release its memory when it
+  exits. An app that does not fit a smaller board, such as the ESP32-C3
+  X3/X4, is left out of that board's build. See
+  [resource target](.agents/rules/hardware-resources.md#resource-target).
 * **Flash:** an optional feature must not grow builds, screens, or callers
   that do not use it. See
   [flash size](.agents/rules/hardware-resources.md#flash-size-unused-features-must-cost-nothing).

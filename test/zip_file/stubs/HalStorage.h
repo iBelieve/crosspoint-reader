@@ -41,7 +41,8 @@ class HalFile : public Print {
     if (!data) return -1;
     readOffsets.push_back(pos);
     const size_t remaining = data->size() - pos;
-    const size_t count = len < remaining ? len : remaining;
+    size_t count = len < remaining ? len : remaining;
+    if (count > maxReadBytes) count = maxReadBytes;
     std::memcpy(dst, data->data() + pos, count);
     pos += count;
     return static_cast<int>(count);
@@ -57,6 +58,8 @@ class HalFile : public Print {
   explicit operator bool() const { return isOpen(); }
 
   static inline std::vector<size_t> readOffsets;
+  // Caps every read, to model a short SD read.
+  static inline size_t maxReadBytes = SIZE_MAX;
 
  private:
   const std::vector<uint8_t>* data = nullptr;

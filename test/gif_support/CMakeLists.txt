@@ -14,8 +14,12 @@ if(NOT gif_patch_result EQUAL 0)
   message(FATAL_ERROR "AnimatedGIF host dependency patch failed")
 endif()
 add_library(animatedgif_host STATIC ${ANIMATEDGIF_SOURCE_DIR}/src/AnimatedGIF.cpp)
-target_include_directories(animatedgif_host PUBLIC ${ANIMATEDGIF_SOURCE_DIR}/src)
+target_include_directories(animatedgif_host SYSTEM PUBLIC ${ANIMATEDGIF_SOURCE_DIR}/src)
 target_compile_definitions(animatedgif_host PUBLIC __LINUX__ MAX_WIDTH=3072)
+# The upstream decoder reads multi-byte fields through unaligned pointer casts by design.
+if(CROSSPOINT_SANITIZERS)
+  target_compile_options(animatedgif_host PRIVATE -fno-sanitize=alignment)
+endif()
 
 add_executable(GifSupportTest GifSupportTest.cpp PixelCacheTest.cpp GifDecoderTest.cpp)
 target_include_directories(GifSupportTest PRIVATE

@@ -4,10 +4,10 @@ python3 -m unittest discover -s test/simulator -p 'test_web_site.py'"""
 import contextlib
 import io
 import json
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import web_site
@@ -27,8 +27,9 @@ class WebSiteTest(unittest.TestCase):
 
     def run_main(self, *args):
         argv = ["web_site.py", str(self.build), *map(str, args)]
-        with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()), \
-                contextlib.redirect_stderr(io.StringIO()):
+        with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(
+            io.StringIO()
+        ), contextlib.redirect_stderr(io.StringIO()):
             return web_site.main()
 
     def test_builds_a_site(self):
