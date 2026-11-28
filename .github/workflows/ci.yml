@@ -209,10 +209,10 @@ jobs:
       matrix:
         # Warnings fail the host build, and GCC and Clang warn differently.
         include:
-          - cc: gcc
-            cxx: g++
-          - cc: clang
-            cxx: clang++
+          - cc: gcc-13
+            cxx: g++-13
+          - cc: clang-18
+            cxx: clang++-18
     steps:
       - uses: actions/checkout@v6
         with:
@@ -220,18 +220,18 @@ jobs:
 
       # The browser test needs Node 22's global WebSocket.
       - uses: actions/setup-node@v4
-        if: matrix.cc == 'gcc'
+        if: matrix.cc == 'gcc-13'
         with:
           node-version: '22'
 
       - name: Test firmware comment and measurements
-        if: matrix.cc == 'gcc'
+        if: matrix.cc == 'gcc-13'
         run: |
           python3 -m unittest discover -s test -p test_firmware_stats.py
           node --test test/firmware_comment.test.js
 
       - name: Test web UI plugin navigation
-        if: matrix.cc == 'gcc'
+        if: matrix.cc == 'gcc-13'
         # Ubuntu 24.04's AppArmor can block the user namespaces Chrome's sandbox needs.
         # The browser test uses the runner's preinstalled Chrome and skips without it.
         run: |

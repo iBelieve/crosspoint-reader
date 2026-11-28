@@ -386,8 +386,11 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
   page->elements.reserve(std::min(count, RESERVE_CAP));
 
   for (uint16_t i = 0; i < count; i++) {
-    uint8_t tag;
-    serialization::readPod(file, tag);
+    uint8_t tag = 0;
+    if (!serialization::tryReadPod(file, tag)) {
+      LOG_ERR("PGE", "Deserialization failed: truncated element tag");
+      return nullptr;
+    }
 
     if (tag == TAG_PageLine) {
       auto pl = PageLine::deserialize(file);
@@ -426,9 +429,8 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
   }
 
   // Deserialize footnotes
-  uint16_t fnCount;
-  serialization::readPod(file, fnCount);
-  if (fnCount > MAX_FOOTNOTES_PER_PAGE) {
+  uint16_t fnCount = 0;
+  if (!serialization::tryReadPod(file, fnCount) || fnCount > MAX_FOOTNOTES_PER_PAGE) {
     LOG_ERR("PGE", "Invalid footnote count %u", fnCount);
     return nullptr;
   }
@@ -444,9 +446,8 @@ std::unique_ptr<Page> Page::deserialize(HalFile& file) {
     entry.href[sizeof(entry.href) - 1] = '\0';
   }
 
-  uint16_t linkCount;
-  serialization::readPod(file, linkCount);
-  if (linkCount > MAX_LINKS_PER_PAGE) {
+  uint16_t linkCount = 0;
+  if (!serialization::tryReadPod(file, linkCount) || linkCount > MAX_LINKS_PER_PAGE) {
     LOG_ERR("PGE", "Invalid link count %u", linkCount);
     return nullptr;
   }
