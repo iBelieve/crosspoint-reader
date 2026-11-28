@@ -1,5 +1,6 @@
 # Lint and format settings for the repository's Python scripts and tests.
 # CI runs `ruff check` and `ruff format --check` on the paths in `include`.
+required-version = "==0.16.9"  # keep in sync with ci.yml
 line-length = 120
 # PlatformIO build scripts run in PlatformIO's own Python; README.md documents
 # 3.8 as the minimum.
