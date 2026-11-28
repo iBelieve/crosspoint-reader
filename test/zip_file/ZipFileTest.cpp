@@ -332,4 +332,18 @@ TEST_F(ZipFileTest, RejectsArchivesWithoutAnEndOfCentralDirectoryRecord) {
   EXPECT_FALSE(tiny.getInflatedFileSize("anything", &size));
 }
 
+TEST_F(ZipFileTest, FailsOpenWhenTheEndOfDirectoryScanReadsShort) {
+  ZipBuilder builder;
+  builder.addStored("mimetype", "application/epub+zip").addStored("a.txt", "aaaa");
+  install(builder);
+  HalFile::maxReadBytes = 16;  // fewer bytes than the scan asks for
+  ZipFile zip(path);
+  size_t size = 0;
+  EXPECT_FALSE(zip.getInflatedFileSize("a.txt", &size));
+  HalFile::maxReadBytes = SIZE_MAX;
+  ZipFile healthy(path);
+  EXPECT_TRUE(healthy.getInflatedFileSize("a.txt", &size));
+  EXPECT_EQ(size, 4u);
+}
+
 }  // namespace
