@@ -165,6 +165,6 @@ test('Tab after jumping to a later plugin begins inside its card', {
   } finally {
     if (cdp) cdp.close();
     child.kill();
-    try { fs.rmSync(profile, {recursive: true, force: true}); } catch {}
+    try { fs.rmSync(profile, {recursive: true, force: true}); } catch { /* best-effort cleanup */ }
   }
 });
