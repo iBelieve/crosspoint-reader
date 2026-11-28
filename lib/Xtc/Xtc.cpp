@@ -22,13 +22,17 @@ void yieldDuringThumbnail(uint8_t& rowsSinceYield) {
 
 bool writeAll(HalFile& file, const uint8_t* data, const size_t size) { return file.write(data, size) == size; }
 
-// close() writes the last sector, so it can fail too. A partial BMP would be
-// reused on every later call, so it is removed.
+// BMPs are written to a temp file and moved into place once complete: the
+// exists() checks would reuse a partial one, left by a failed write or a reset,
+// on every later call. close() writes the last sector, so it can fail too.
+std::string tmpBmpPath(const std::string& path) { return path + ".tmp"; }
+
 bool finishBmp(HalFile& file, const std::string& path, const bool written) {
-  const bool ok = file.close() && written;
+  const std::string tmpPath = tmpBmpPath(path);
+  const bool ok = file.close() && written && Storage.replaceFile(tmpPath.c_str(), path.c_str());
   if (!ok) {
     LOG_ERR("XTC", "Failed to write %s", path.c_str());
-    Storage.remove(path.c_str());
+    Storage.remove(tmpPath.c_str());
   }
   return ok;
 }
@@ -200,7 +204,7 @@ bool Xtc::generateCoverBmp() const {
 
   // Create BMP file
   HalFile coverBmp;
-  if (!Storage.openFileForWrite("XTC", getCoverBmpPath(), coverBmp)) {
+  if (!Storage.openFileForWrite("XTC", tmpBmpPath(getCoverBmpPath()), coverBmp)) {
     LOG_DBG("XTC", "Failed to create cover BMP file");
     return false;
   }
@@ -341,19 +345,15 @@ bool Xtc::generateThumbBmp(int height) const {
       const std::string thumbPath = getThumbBmpPath(height);
       bool copyOk = false;
       if (Storage.openFileForRead("XTC", getCoverBmpPath(), src)) {
-        if (Storage.openFileForWrite("XTC", thumbPath, dst)) {
+        if (Storage.openFileForWrite("XTC", tmpBmpPath(thumbPath), dst)) {
           copyOk = true;
           uint8_t buffer[512];
           while (copyOk && src.available()) {
             // read() returns -1 on an SD error.
             const int bytesRead = src.read(buffer, sizeof(buffer));
-            copyOk =
-                bytesRead > 0 && dst.write(buffer, static_cast<size_t>(bytesRead)) == static_cast<size_t>(bytesRead);
+            copyOk = bytesRead > 0 && writeAll(dst, buffer, static_cast<size_t>(bytesRead));
           }
-          // close() writes the last sector, so it can fail too.
-          copyOk = dst.close() && copyOk;
-          // A partial thumbnail would be reused on every later call.
-          if (!copyOk) Storage.remove(thumbPath.c_str());
+          copyOk = finishBmp(dst, thumbPath, copyOk);
         }
       }
       if (!copyOk) {
@@ -397,7 +397,7 @@ bool Xtc::generateThumbBmp(int height) const {
 
   // Create thumbnail BMP file - use 1-bit format for fast home screen rendering (no gray passes)
   HalFile thumbBmp;
-  if (!Storage.openFileForWrite("XTC", getThumbBmpPath(height), thumbBmp)) {
+  if (!Storage.openFileForWrite("XTC", tmpBmpPath(getThumbBmpPath(height)), thumbBmp)) {
     LOG_DBG("XTC", "Failed to create thumb BMP file");
     return false;
   }

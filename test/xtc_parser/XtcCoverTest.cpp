@@ -77,6 +77,7 @@ class XtcCoverWrites : public ::testing::TestWithParam<CoverCase> {
       Storage.failingWriteCall = i;
       EXPECT_FALSE(generate()) << "write call " << i << " of " << calls;
       EXPECT_EQ(Storage.file(path), nullptr) << "partial file kept after write call " << i;
+      EXPECT_EQ(Storage.file(path + ".tmp"), nullptr) << "temp file kept after write call " << i;
     }
     Storage.failingWriteCall = SIZE_MAX;
     Storage.remove(path.c_str());
@@ -95,6 +96,25 @@ TEST_P(XtcCoverWrites, CoverDropsFileWhenCloseFails) {
   Storage.failClose = true;
   EXPECT_FALSE(xtc.generateCoverBmp());
   EXPECT_EQ(Storage.file(xtc.getCoverBmpPath()), nullptr);
+  EXPECT_EQ(Storage.file(xtc.getCoverBmpPath() + ".tmp"), nullptr);
+}
+
+TEST_P(XtcCoverWrites, CoverDropsTempFileWhenMoveFails) {
+  Storage.failReplace = true;
+  EXPECT_FALSE(xtc.generateCoverBmp());
+  EXPECT_EQ(Storage.file(xtc.getCoverBmpPath()), nullptr);
+  EXPECT_EQ(Storage.file(xtc.getCoverBmpPath() + ".tmp"), nullptr);
+}
+
+// A reset mid-write leaves only the temp file, so the next call regenerates the BMP.
+TEST_P(XtcCoverWrites, CoverIgnoresTempFileLeftByAReset) {
+  xtc.setupCacheDir();
+  Storage.setFile(xtc.getCoverBmpPath() + ".tmp", {'B', 'M'});
+  ASSERT_TRUE(xtc.generateCoverBmp());
+  const auto* cover = Storage.file(xtc.getCoverBmpPath());
+  ASSERT_NE(cover, nullptr);
+  EXPECT_GT(cover->size(), 2u);
+  EXPECT_EQ(Storage.file(xtc.getCoverBmpPath() + ".tmp"), nullptr);
 }
 
 TEST_P(XtcCoverWrites, ScaledThumbDropsPartialFile) {

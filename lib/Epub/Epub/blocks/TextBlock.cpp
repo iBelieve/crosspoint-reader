@@ -170,13 +170,19 @@ TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<in
   }
 
   // Same invariant as deserialize(): a ruby-less line keeps rubyTexts null. Layout
-  // passes ruby for every line, sized like words or shorter.
+  // passes none, or one entry per word.
   const size_t rubyCount = std::min<size_t>(wordRubyTexts.size(), numWords);
   for (size_t i = 0; i < rubyCount; i++) {
     if (wordRubyTexts[i].empty()) continue;
+    const size_t rubyBytes = static_cast<size_t>(numWords) * sizeof(std::string);
     rubyTexts = makeUniqueNoThrow<std::string[]>(numWords);
     if (!rubyTexts) {
-      LOG_ERR("TXB", "OOM: ruby texts for %u words", static_cast<unsigned>(numWords));
+      // Same evict-and-retry as the arena.
+      freeink::MemoryManager::instance().ensureFree(rubyBytes + 4 * 1024);
+      rubyTexts = makeUniqueNoThrow<std::string[]>(numWords);
+    }
+    if (!rubyTexts) {
+      LOG_ERR("TXB", "OOM: ruby texts %u bytes", static_cast<uint32_t>(rubyBytes));
       isValid = false;
       return;
     }
@@ -266,7 +272,9 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
   std::unique_ptr<RubyDrawInfo[]> rubies;
   if (hasRuby() && !scanning) {
     rubies = makeUniqueNoThrow<RubyDrawInfo[]>(numWords);
-    if (!rubies) LOG_ERR("TXB", "OOM: ruby layout for %u words", static_cast<unsigned>(numWords));
+    if (!rubies) {
+      LOG_ERR("TXB", "OOM: ruby layout %u bytes", static_cast<uint32_t>(numWords * sizeof(RubyDrawInfo)));
+    }
   }
   const bool blockHasRuby = hasRuby() && (scanning || rubies);
   if (rubies) {
@@ -662,7 +670,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   }
 
   // Ruby text data. Ruby is a CJK feature, so for nearly every book every entry here
-  // is the empty string. Materializing the vector regardless costs wordCount * 24 bytes
+  // is the empty string. Materializing the array regardless costs wordCount * 24 bytes
   // (sizeof(std::string)) plus a heap block per line, held for as long as the page is
   // resident -- several KB of DRAM on a full page, none of it ever read. A null
   // rubyTexts is the "no ruby" representation, so allocate lazily and only once a
@@ -680,7 +688,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
     if (!block->rubyTexts) {
       block->rubyTexts = makeUniqueNoThrow<std::string[]>(wc);
       if (!block->rubyTexts) {
-        LOG_ERR("TXB", "OOM: ruby texts for %u words", static_cast<unsigned>(wc));
+        LOG_ERR("TXB", "OOM: ruby texts %u bytes", static_cast<uint32_t>(wc * sizeof(std::string)));
         return nullptr;
       }
     }

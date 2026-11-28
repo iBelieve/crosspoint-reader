@@ -1,4 +1,5 @@
-// The ImageBlock parts that need no renderer or decoder, so host tests can build them.
+// The ImageBlock members that need no renderer or decoder, kept apart from
+// ImageBlock.cpp so host tests can build them.
 #include <Logging.h>
 #include <Memory.h>
 #include <Serialization.h>
@@ -31,6 +32,6 @@ std::unique_ptr<ImageBlock> ImageBlock::deserialize(HalFile& file) {
     return nullptr;
   }
   auto block = makeUniqueNoThrow<ImageBlock>(path, src, w, h);
-  if (!block) LOG_ERR("IMG", "OOM: ImageBlock");
+  if (!block) LOG_ERR("IMG", "OOM: ImageBlock %u bytes", static_cast<uint32_t>(sizeof(ImageBlock)));
   return block;
 }

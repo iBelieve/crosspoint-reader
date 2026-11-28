@@ -66,6 +66,13 @@ class HalStorage {
   }
   bool exists(const char* path) const { return files.contains(path) || dirs.contains(path); }
   bool remove(const char* path) { return files.erase(path) > 0; }
+  bool replaceFile(const char* tmpPath, const char* path) {
+    const auto it = files.find(tmpPath);
+    if (it == files.end() || failReplace) return false;
+    files[path] = std::move(it->second);
+    files.erase(tmpPath);
+    return true;
+  }
   bool mkdir(const char* path) {
     dirs.insert(path);
     return true;
@@ -90,12 +97,14 @@ class HalStorage {
     writeCalls = 0;
     failingWriteCall = SIZE_MAX;
     failClose = false;
+    failReplace = false;
   }
 
   // Zero-based index of the one write call that comes up short, counted across files.
   size_t writeCalls = 0;
   size_t failingWriteCall = SIZE_MAX;
   bool failClose = false;
+  bool failReplace = false;
 
  private:
   std::map<std::string, std::vector<uint8_t>> files;
