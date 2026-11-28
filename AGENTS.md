@@ -103,7 +103,10 @@ yourself; do not leave them for CI to find.
    `node --test test/firmware_comment.test.js`. Run the suite under ASan and
    UBSan too (see `test/README`) when a change touches parsing, buffers, or
    other memory handling.
-3. **Static analysis:** `pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high`.
+3. **Static analysis:** `pio check -e x4c --fail-on-defect low --fail-on-defect medium --fail-on-defect high`,
+   and `./bin/clang-tidy-check` (clang-tidy 21, for example
+   `pip install clang-tidy==21.1.6`; pass changed files to check only those
+   while iterating). clang-tidy covers the sources the host test build compiles.
    For Python, `ruff check .` and `ruff format --check .` (ruff 0.16.9, as
    CI pins; `ruff.toml` lists the covered paths). For JavaScript, `npm ci && npx eslint .`.
 4. **Firmware build:** `pio run -e <env>` for each board the change affects.
@@ -118,7 +121,7 @@ Rules for these checks:
   can compile, as `lib/LibraryIndex` does, and keep the activity a thin UI
   layer. A bug fix gets a test that fails before the fix when the code is
   host-testable.
-- Do not add compiler warnings, cppcheck findings, or lint findings. Fix the
+- Do not add compiler warnings, cppcheck or clang-tidy findings, or lint findings. Fix the
   cause. Suppress only with a one-line reason at the suppression.
 - Never skip, disable, weaken, or delete a test or check to get green. If a
   test is wrong, fix it and say why in the commit message.

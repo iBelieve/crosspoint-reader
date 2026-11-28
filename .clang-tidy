@@ -1,0 +1,88 @@
+# Checks for bugs and needless work, run by bin/clang-tidy-check and CI on the
+# sources the host test build compiles. Style-only checks are left out.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-branch-clone,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-incorrect-roundings,
+  -bugprone-narrowing-conversions,
+  clang-analyzer-*,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -clang-analyzer-optin.performance.Padding,
+  -clang-analyzer-security.ArrayBound,
+  cert-err34-c,
+  cert-flp30-c,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-rvalue-reference-param-not-moved,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-virtual-class-destructor,
+  misc-*,
+  -misc-const-correctness,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -misc-use-internal-linkage,
+  modernize-deprecated-headers,
+  modernize-redundant-void-arg,
+  modernize-use-bool-literals,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-nullptr,
+  modernize-use-override,
+  performance-*,
+  -performance-enum-size,
+  readability-container-contains,
+  readability-container-size-empty,
+  readability-delete-null-pointer,
+  readability-duplicate-include,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-non-const-parameter,
+  readability-redundant-*,
+  -readability-redundant-casting,
+  readability-simplify-boolean-expr,
+  readability-static-accessed-through-instance,
+  readability-string-compare,
+  readability-suspicious-call-argument,
+  readability-uniqueptr-delete-release
+# Why some checks are off:
+# - implicit-widening-of-multiplication-result: nearly all hits widen to size_t,
+#   which is 32 bits like int on the firmware targets. Products stored in 64-bit
+#   values (seek64 offsets, timestamps) still need care in review.
+# - narrowing-conversions, incorrect-roundings: hundreds of hits in pixel and
+#   layout arithmetic on non-negative values whose ranges are known.
+# - branch-clone: condition chains here spell out cases that share a result on
+#   purpose, and logging macros that compile to nothing make branches look equal.
+# - NewDeleteLeaks: does not follow ownership through std::unique_ptr<T[]>, which
+#   most allocations here use. LeakSanitizer is the better tool for leaks.
+# - security.ArrayBound: new in LLVM 21; its reports here are inside
+#   libstdc++'s std::sort or on paths with impossible string contents.
+# - EnumCastOutOfRange: several enums are bit flags, so OR-ed values are valid.
+# - Padding: reports the 64-bit host layout, not the 32-bit firmware layout.
+# - make-unique: std::make_unique aborts on OOM under -fno-exceptions; firmware
+#   code uses makeUniqueNoThrow (lib/Memory) instead.
+# - redundant-casting: a cast that is redundant on the host can be needed on the
+#   device, where types such as millis()'s differ.
+# - easily-swappable-parameters, enum-size, const-correctness, include-cleaner,
+#   no-recursion, non-private-member-variables, use-anonymous-namespace,
+#   use-internal-linkage: style, not bugs.
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(lib|src|test)/.*'
+ExcludeHeaderFilterRegex: '.*/(lib/expat|lib/miniz|lib/uzlib|_deps|freeink-sdk)/.*'
+CheckOptions:
+  # Zeroing every buffer array on construction would cost time on hot paths.
+  cppcoreguidelines-pro-type-member-init.IgnoreArrays: true
+  # int8_t holds numbers (spacing, offsets), not characters.
+  bugprone-signed-char-misuse.CharTypdefsToIgnore: int8_t
+  # Keep conditions as written; rewriting !(a && b) is a style choice.
+  readability-simplify-boolean-expr.SimplifyDeMorgan: false
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
+  cppcoreguidelines-special-member-functions.AllowMissingMoveFunctionsWhenCopyIsDeleted: true
+  cppcoreguidelines-special-member-functions.AllowImplicitlyDeletedCopyOrMove: true

@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Run clang-tidy on the sources the host test build compiles.
+
+Uses .clang-tidy at the repository root (tests have their own). The compile
+database comes from configuring test/CMakeLists.txt with Clang; nothing is
+built. Any finding fails the run.
+
+  bin/clang-tidy-check                  # every reader-owned source in the build
+  bin/clang-tidy-check lib/Utf8/Utf8.cpp src/util/UrlUtils.cpp
+  bin/clang-tidy-check --fix            # apply clang-tidy's suggested fixes
+  bin/clang-tidy-check --shard 2/2      # the second of two equal parts (CI)
+
+Sources the host build does not compile cannot be checked here.
+"""
+
+import argparse
+import concurrent.futures
+import json
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MIN_MAJOR = 21
+# Vendored or generated code that this repository does not maintain.
+EXCLUDED_PREFIXES = (
+    "build/",
+    "freeink-sdk/",
+    "lib/expat/",
+    "lib/miniz/",
+    "lib/uzlib/",
+)
+
+
+def find_clang_tidy():
+    for name in (f"clang-tidy-{MIN_MAJOR}", "clang-tidy"):
+        path = shutil.which(name)
+        if path:
+            return path
+    sys.exit(f"clang-tidy not found. Install clang-tidy {MIN_MAJOR}, for example: pip install clang-tidy=={MIN_MAJOR}.1.6")
+
+
+def check_version(binary):
+    out = subprocess.run([binary, "--version"], capture_output=True, text=True, check=True).stdout
+    match = re.search(r"version (\d+)", out)
+    major = int(match.group(1)) if match else 0
+    if major < MIN_MAJOR:
+        sys.exit(f"{binary} is too old ({out.strip()}); .clang-tidy needs clang-tidy {MIN_MAJOR} or newer.")
+
+
+def configure(build_dir):
+    # The Clang-only flags in test/CMakeLists.txt silence warnings that clang-tidy
+    # would otherwise report as clang-diagnostic-* findings.
+    if not (shutil.which("clang") and shutil.which("clang++")):
+        sys.exit("clang and clang++ not found; the compile database must come from a Clang build.")
+    # Configure every run so the database follows CMakeLists.txt changes; it is
+    # quick when nothing changed.
+    cmd = ["cmake", "-S", os.path.join(ROOT, "test"), "-B", build_dir, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"]
+    cmd += ["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"]
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+    return os.path.join(build_dir, "compile_commands.json")
+
+
+def defines(entry):
+    args = entry.get("arguments") or shlex.split(entry["command"])
+    return tuple(sorted(a for a in args if a.startswith("-D")))
+
+
+def excluded(path, build_rel):
+    return path.startswith(EXCLUDED_PREFIXES) or path.startswith(build_rel) or path.startswith("../")
+
+
+def filtered_database(database, build_dir, out_dir):
+    """Keeps one compile command per source and set of -D flags.
+
+    Several test targets compile the same library source with the same macros;
+    clang-tidy would otherwise analyze it once per target.
+    """
+    with open(database, encoding="utf-8") as f:
+        entries = json.load(f)
+    build_rel = os.path.relpath(build_dir, ROOT) + os.sep
+    kept, seen = [], set()
+    for entry in entries:
+        path = os.path.relpath(os.path.join(entry["directory"], entry["file"]), ROOT)
+        key = (path, defines(entry))
+        if excluded(path, build_rel) or key in seen:
+            continue
+        seen.add(key)
+        kept.append(entry)
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "compile_commands.json"), "w", encoding="utf-8") as f:
+        json.dump(kept, f, indent=1)
+    return sorted({p for p, _ in seen})
+
+
+def select(found, only):
+    if only is None:
+        return found
+    wanted = {os.path.relpath(os.path.abspath(p), ROOT) for p in only}
+    missing = sorted(wanted - set(found))
+    if missing:
+        for path in missing:
+            print(f"not a source the host build compiles: {path}", file=sys.stderr)
+        sys.exit("Name .c/.cpp sources; headers are checked through the sources that include them.")
+    return [p for p in found if p in wanted]
+
+
+def run_one(binary, build_dir, path, fix):
+    cmd = [binary, "-p", build_dir, "--quiet", path]
+    if fix:
+        cmd.insert(1, "--fix")
+    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    # clang-tidy prints a "N warnings generated." summary on stderr even with --quiet.
+    noise = re.compile(r"^\d+ warnings? (and \d+ errors? )?generated\.$|^Suppressed \d+ warnings|^Use -header-filter")
+    stderr = "\n".join(line for line in result.stderr.splitlines() if not noise.match(line))
+    return path, result.returncode, result.stdout.strip(), stderr.strip()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("files", nargs="*", help="limit the run to these sources")
+    parser.add_argument("--build-dir", default=os.path.join(ROOT, "build", "tidy"))
+    parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 1)
+    parser.add_argument("--fix", action="store_true", help="apply suggested fixes (runs serially)")
+    parser.add_argument("--shard", default="1/1", help="check only part K of N of the sources, as K/N")
+    args = parser.parse_args()
+
+    binary = find_clang_tidy()
+    check_version(binary)
+    build_dir = os.path.abspath(args.build_dir)
+    tidy_db = os.path.join(build_dir, "clang-tidy")
+    paths = select(filtered_database(configure(build_dir), build_dir, tidy_db), args.files or None)
+    shard, shards = (int(n) for n in args.shard.split("/"))
+    if not 1 <= shard <= shards:
+        sys.exit(f"--shard {args.shard}: expected K/N with 1 <= K <= N")
+    paths = paths[shard - 1 :: shards]
+    if not paths:
+        print("No sources to check.")
+        return 0
+
+    # Parallel --fix runs can write the same header at once.
+    jobs = 1 if args.fix else args.jobs
+    failed = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        futures = [pool.submit(run_one, binary, tidy_db, p, args.fix) for p in paths]
+        for future in concurrent.futures.as_completed(futures):
+            path, code, out, err = future.result()
+            if code != 0 or out:
+                failed.append(path)
+            for text in (out, err):
+                if text:
+                    print(text, flush=True)
+
+    print(f"clang-tidy: {len(paths)} sources checked, {len(failed)} with findings.")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
