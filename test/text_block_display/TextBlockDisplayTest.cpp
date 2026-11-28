@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "blocks/TextBlock.h"
+#include "test/FailedWriteCheck.h"
 #include "test/ScopedTempDir.h"
 
 namespace {
@@ -220,8 +221,9 @@ std::unique_ptr<TextBlock> loadDamagedRuby(void (*damage)(std::string& bytes, si
 TEST(TextBlockRuby, RoundTrips) {
   const auto restored = loadDamagedRuby([](std::string&, size_t) {});
   ASSERT_NE(restored, nullptr);
-  ASSERT_EQ(restored->getRubyTexts().size(), 2u);
-  EXPECT_EQ(restored->getRubyTexts()[1], "rubytext");
+  ASSERT_TRUE(restored->hasRuby());
+  EXPECT_TRUE(restored->rubyText(0).empty());
+  EXPECT_EQ(restored->rubyText(1), "rubytext");
 }
 
 // The over-long string is complete and the rest of the block follows it intact, so only the limit rejects it.
@@ -266,4 +268,41 @@ TEST(TextBlockDisplay, RejectsATruncatedHeader) {
     ASSERT_TRUE(in.open(path.c_str(), "rb"));
     EXPECT_EQ(TextBlock::deserialize(in), nullptr) << size << " header bytes";
   }
+}
+
+TEST(TextBlockRuby, KeepsNoStorageWhenEveryAnnotationIsEmpty) {
+  TextBlock block({"a", "b"}, {0, 10}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(),
+                  {"", ""});
+  ASSERT_TRUE(block.valid());
+  EXPECT_FALSE(block.hasRuby());
+  EXPECT_TRUE(block.rubyText(1).empty());
+}
+
+// Layout may pass fewer annotations than words; the rest have none.
+TEST(TextBlockRuby, ShortAnnotationListLeavesLaterWordsBare) {
+  TextBlock block({"a", "b", "c"}, {0, 10, 20}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR, EpdFontFamily::REGULAR},
+                  {}, {}, BlockStyle(), {"", "r"});
+  ASSERT_TRUE(block.valid());
+  ASSERT_TRUE(block.hasRuby());
+  const auto restored = roundTrip(block, "short-ruby.bin");
+  ASSERT_NE(restored, nullptr);
+  ASSERT_TRUE(restored->hasRuby());
+  EXPECT_TRUE(restored->rubyText(0).empty());
+  EXPECT_EQ(restored->rubyText(1), "r");
+  EXPECT_TRUE(restored->rubyText(2).empty());
+}
+
+// A full SD card fails a write; the section build must see it and drop the cache.
+TEST(TextBlockSerialize, ReportsEveryFailedWrite) {
+  TextBlock block({"kan", "ji"}, {0, 30}, {EpdFontFamily::REGULAR, EpdFontFamily::BOLD}, {}, {}, BlockStyle(),
+                  {"", "rubytext"}, {}, {}, UINT16_MAX, {"", kShaped});
+  const ScopedTempDir tempDir;
+  const auto path = (tempDir.path() / "failed-write.bin").string();
+  const auto serialize = [&](HalFile& out) { return block.serialize(out); };
+  ASSERT_TRUE(block.valid());
+  expectEveryFailedWriteReported(path.c_str(), serialize);
+
+  const uint8_t slots[] = {0, 1};
+  ASSERT_TRUE(block.setWordFonts(slots, {7, 0, 0}));
+  expectEveryFailedWriteReported(path.c_str(), serialize);
 }

@@ -38,6 +38,7 @@ class HalFile {
       HalFileTest::failNextWrite = false;
       return 0;
     }
+    if (writeCalls_++ == failingWriteCall_) return 0;
     const size_t allowed = count < writeBytesLeft_ ? count : writeBytesLeft_;
     const size_t written = file_ ? std::fwrite(buffer, 1, allowed, file_) : 0;
     writeBytesLeft_ -= written;
@@ -71,10 +72,15 @@ class HalFile {
 
   size_t write(const uint8_t* buffer, size_t count) { return write(static_cast<const void*>(buffer), count); }
   void limitWritesTo(size_t count) { writeBytesLeft_ = count; }
+  // Fails only the write call with this zero-based index; later calls succeed.
+  void failWriteCall(size_t index) { failingWriteCall_ = index; }
+  size_t writeCalls() const { return writeCalls_; }
 
  private:
   std::FILE* file_ = nullptr;
   size_t writeBytesLeft_ = SIZE_MAX;
+  size_t writeCalls_ = 0;
+  size_t failingWriteCall_ = SIZE_MAX;
 };
 
 class HalStorage {

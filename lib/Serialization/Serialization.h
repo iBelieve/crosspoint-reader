@@ -65,10 +65,10 @@ inline void writeString(std::ostream& os, const std::string& s) {
   os.write(s.data(), len);
 }
 
-inline void writeString(HalFile& file, const std::string& s) {
+// Returns false on a short write.
+inline bool writeString(HalFile& file, const std::string& s) {
   const uint32_t len = cappedStringLength(s);
-  writePod(file, len);
-  file.write(reinterpret_cast<const uint8_t*>(s.data()), len);
+  return tryWritePod(file, len) && (len == 0 || file.write(reinterpret_cast<const uint8_t*>(s.data()), len) == len);
 }
 
 // Writes the whole string; callers bound it themselves (see ClippingStore).
