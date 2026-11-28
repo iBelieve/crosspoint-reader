@@ -65,17 +65,15 @@ def configure(build_dir):
 
 
 def variant(entry):
-    """The arguments that change what clang-tidy sees: macros and include paths."""
-    args = entry.get("arguments") or shlex.split(entry["command"])
-    kept, take_next = [], False
+    """The compiler flags, minus the ones that name this target's output files."""
+    args = (entry.get("arguments") or shlex.split(entry["command"]))[1:]
+    kept, skip_next = [], False
     for arg in args:
-        if take_next:
-            kept[-1] += " " + arg
-            take_next = False
-        elif arg in ("-I", "-isystem", "-iquote", "-include", "-D"):
-            kept.append(arg)
-            take_next = True
-        elif arg.startswith(("-D", "-I", "-isystem", "-iquote", "-include")):
+        if skip_next:
+            skip_next = False
+        elif arg in ("-o", "-MF", "-MT", "-MQ", "-c"):
+            skip_next = arg != "-c"
+        elif arg.startswith("-") and not arg.startswith(("-o", "-MF", "-MT", "-MQ")):
             kept.append(arg)
     return tuple(kept)
 
@@ -85,7 +83,7 @@ def excluded(path, build_rel):
 
 
 def filtered_database(database, build_dir, out_dir):
-    """Keeps one compile command per source, macro set and include path list.
+    """Keeps one compile command per source and set of compiler flags.
 
     Several test targets compile the same library source with the same flags;
     clang-tidy would otherwise analyze it once per target. clang-tidy runs every
