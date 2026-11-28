@@ -411,8 +411,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
     }
 
     // Horizontal ruby text rendering
-    if (blockHasRuby && !rubyTexts[i].empty() &&
-        (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
+    if (blockHasRuby && !rubyTexts[i].empty() && (wordStyle(i) & EpdFontFamily::RUBY_CONTINUE) == 0) {
       if (scanning) {
         renderer.drawText(fontId, 0, 0, rubyTexts[i].c_str(), true, EpdFontFamily::SUP);
       } else {
@@ -536,8 +535,7 @@ bool TextBlock::serialize(HalFile& file) const {
     }
   }
 
-  // Style (alignment + margins/padding/indent)
-  // Per-word fonts follow: a flag, then the font table and one slot per word.
+  // Style (alignment + margins/padding/indent), then the per-word font flag.
   const uint8_t hasWordFonts = wordFontData ? 1 : 0;
   const bool styleWritten = serialization::tryWritePod(file, blockStyle.alignment) &&
                             serialization::tryWritePod(file, blockStyle.textAlignDefined) &&

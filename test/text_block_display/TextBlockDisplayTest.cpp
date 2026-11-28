@@ -280,8 +280,9 @@ TEST(TextBlockRuby, KeepsNoStorageWhenEveryAnnotationIsEmpty) {
 
 // Layout may pass fewer annotations than words; the rest have none.
 TEST(TextBlockRuby, ShortAnnotationListLeavesLaterWordsBare) {
-  TextBlock block({"a", "b", "c"}, {0, 10, 20}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR, EpdFontFamily::REGULAR},
-                  {}, {}, BlockStyle(), {"", "r"});
+  TextBlock block({"a", "b", "c"}, {0, 10, 20},
+                  {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(),
+                  {"", "r"});
   ASSERT_TRUE(block.valid());
   ASSERT_TRUE(block.hasRuby());
   const auto restored = roundTrip(block, "short-ruby.bin");
