@@ -1,0 +1,32 @@
+# Lint and format settings for the repository's Python scripts and tests.
+# CI runs `ruff check` and `ruff format --check` on the paths in `include`.
+line-length = 120
+# PlatformIO build scripts run in PlatformIO's own Python, which may be older
+# than the CI interpreter.
+target-version = "py39"
+include = ["scripts/**/*.py", "test/**/*.py", ".github/scripts/**/*.py"]
+extend-exclude = ["scripts/vendor"]
+# SCons injects these into PlatformIO extra_scripts.
+builtins = ["Import", "env"]
+
+[lint]
+select = [
+  "E", "W",  # pycodestyle
+  "F",       # pyflakes
+  "I",       # isort
+  "B",       # bugbear
+  "UP",      # pyupgrade
+  "C4",      # comprehensions
+  "SIM",     # simplify
+  "PIE",
+  "PLE", "PLW",
+  "RUF",
+]
+ignore = [
+  # Test EPUBs and translations use typographic quotes, dashes and other
+  # non-ASCII text on purpose.
+  "RUF001", "RUF002", "RUF003",
+  # The formatter wraps code; the long lines left are XHTML/CSS string
+  # literals in the EPUB generators and fixtures.
+  "E501",
+]

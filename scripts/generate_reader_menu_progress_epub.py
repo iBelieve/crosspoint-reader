@@ -23,12 +23,47 @@ import random
 
 from generate_dictionary_synonyms_test_epub import OUTPUT_DIR, create_epub, make_chapter
 
-WORDS = (
-    "reader menu chapter page progress section cache header band battery "
-    "portrait landscape margin serif glyph render buffer flash heap stack "
-    "spine anchor offset percent total index fallback release restore "
-    "quiet steady narrow bright faint slow careful plain small whole"
-).split()
+WORDS = [
+    "reader",
+    "menu",
+    "chapter",
+    "page",
+    "progress",
+    "section",
+    "cache",
+    "header",
+    "band",
+    "battery",
+    "portrait",
+    "landscape",
+    "margin",
+    "serif",
+    "glyph",
+    "render",
+    "buffer",
+    "flash",
+    "heap",
+    "stack",
+    "spine",
+    "anchor",
+    "offset",
+    "percent",
+    "total",
+    "index",
+    "fallback",
+    "release",
+    "restore",
+    "quiet",
+    "steady",
+    "narrow",
+    "bright",
+    "faint",
+    "slow",
+    "careful",
+    "plain",
+    "small",
+    "whole",
+]
 
 
 def prose(seed, words):
@@ -42,29 +77,39 @@ def prose(seed, words):
         for _ in range(count):
             sentence.append(rng.choice(WORDS))
             if len(sentence) >= rng.randint(7, 14):
-                sentences.append(' '.join(sentence).capitalize() + '.')
+                sentences.append(" ".join(sentence).capitalize() + ".")
                 sentence = []
         if sentence:
-            sentences.append(' '.join(sentence).capitalize() + '.')
-        paragraphs.append('<p>' + ' '.join(sentences) + '</p>')
+            sentences.append(" ".join(sentence).capitalize() + ".")
+        paragraphs.append("<p>" + " ".join(sentences) + "</p>")
         remaining -= count
-    return '\n'.join(paragraphs)
+    return "\n".join(paragraphs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     chapters = [
-        ("Short Chapter", make_chapter("Short Chapter",
-            "<p><b>Check:</b> turn two pages, open the reader menu and note the Chapter and "
-            "Book values. Select Chapter, then Back: the values must be unchanged. Repeat with "
-            "Text Settings. Go to % must open at the Book value.</p>\n" + prose(3434, 400))),
-        ("Long Chapter", make_chapter("Long Chapter",
-            "<p><b>Check:</b> this chapter is still being laid out while you read it. Turn ten "
-            "pages, open the reader menu, note the Chapter total, Select Chapter, then Back. "
-            "While layout is still running the total may be lower than before; once the whole "
-            "chapter is laid out it must match.</p>\n" + prose(3435, 3000))),
+        (
+            "Short Chapter",
+            make_chapter(
+                "Short Chapter",
+                "<p><b>Check:</b> turn two pages, open the reader menu and note the Chapter and "
+                "Book values. Select Chapter, then Back: the values must be unchanged. Repeat with "
+                "Text Settings. Go to % must open at the Book value.</p>\n" + prose(3434, 400),
+            ),
+        ),
+        (
+            "Long Chapter",
+            make_chapter(
+                "Long Chapter",
+                "<p><b>Check:</b> this chapter is still being laid out while you read it. Turn ten "
+                "pages, open the reader menu, note the Chapter total, Select Chapter, then Back. "
+                "While layout is still running the total may be lower than before; once the whole "
+                "chapter is laid out it must match.</p>\n" + prose(3435, 3000),
+            ),
+        ),
         ("Closing", make_chapter("Closing", prose(3436, 150))),
     ]
 
-    output_file = OUTPUT_DIR / 'test_reader_menu_progress.epub'
-    create_epub(output_file, 'Reader Menu Progress', chapters)
+    output_file = OUTPUT_DIR / "test_reader_menu_progress.epub"
+    create_epub(output_file, "Reader Menu Progress", chapters)
     print(f"Created: {output_file}")

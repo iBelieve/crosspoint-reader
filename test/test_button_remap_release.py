@@ -1,31 +1,43 @@
 """Compile the production remapping loop with input/storage stubs."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/activities/settings/ButtonRemapActivity.cpp").read_text()
 header = (ROOT / "src/activities/settings/ButtonRemapActivity.h").read_text()
 exit_action = "enum class ExitAction" + header.split("enum class ExitAction", 1)[1].split(";", 1)[0] + ";"
-loop = "void ButtonRemapActivity::loop() {" + source.split(
-    "void ButtonRemapActivity::loop() {", 1
-)[1].split("void ButtonRemapActivity::render(", 1)[0]
-apply_mapping = "void ButtonRemapActivity::applyTempMapping() {" + source.split(
-    "void ButtonRemapActivity::applyTempMapping() {", 1
-)[1].split("bool ButtonRemapActivity::validateUnassigned(", 1)[0]
-validate_unassigned = "bool ButtonRemapActivity::validateUnassigned(" + source.split(
-    "bool ButtonRemapActivity::validateUnassigned(", 1
-)[1].split("const char* ButtonRemapActivity::getRoleName(", 1)[0]
-error_duration = "constexpr unsigned long kErrorDisplayMs" + source.split(
-    "constexpr unsigned long kErrorDisplayMs", 1
-)[1].split(";", 1)[0] + ";"
+loop = (
+    "void ButtonRemapActivity::loop() {"
+    + source.split("void ButtonRemapActivity::loop() {", 1)[1].split("void ButtonRemapActivity::render(", 1)[0]
+)
+apply_mapping = (
+    "void ButtonRemapActivity::applyTempMapping() {"
+    + source.split("void ButtonRemapActivity::applyTempMapping() {", 1)[1].split(
+        "bool ButtonRemapActivity::validateUnassigned(", 1
+    )[0]
+)
+validate_unassigned = (
+    "bool ButtonRemapActivity::validateUnassigned("
+    + source.split("bool ButtonRemapActivity::validateUnassigned(", 1)[1].split(
+        "const char* ButtonRemapActivity::getRoleName(", 1
+    )[0]
+)
+error_duration = (
+    "constexpr unsigned long kErrorDisplayMs"
+    + source.split("constexpr unsigned long kErrorDisplayMs", 1)[1].split(";", 1)[0]
+    + ";"
+)
 
-harness = r"""
+harness = (
+    r"""
 #include <cassert>
 #include <cstdint>
 #include <string>
-""" + error_duration + r"""
+"""
+    + error_duration
+    + r"""
 enum StrId { STR_ALREADY_ASSIGNED };
 const char* tr(StrId id) { assert(id == STR_ALREADY_ASSIGNED); return "already assigned"; }
 unsigned long now = 2000;
@@ -48,7 +60,9 @@ struct MappedInputManager {
   int getPressedFrontButton() const { return rawFront; }
 };
 struct ButtonRemapActivity {
-""" + exit_action + r"""
+"""
+    + exit_action
+    + r"""
   ExitAction exitAction = ExitAction::None;
   uint8_t currentStep = 0;
   uint8_t tempMapping[4] = {255, 255, 255, 255};
@@ -63,7 +77,11 @@ struct ButtonRemapActivity {
   void loop();
 };
 struct RenderLock { explicit RenderLock(ButtonRemapActivity&) {} };
-""" + loop + apply_mapping + validate_unassigned + r"""
+"""
+    + loop
+    + apply_mapping
+    + validate_unassigned
+    + r"""
 void expectMapping(int back, int confirm, int left, int right) {
   assert(SETTINGS.frontButtonBack == back);
   assert(SETTINGS.frontButtonConfirm == confirm);
@@ -182,11 +200,14 @@ int main() {
   assert(sameRole.validateUnassigned(1));
 }
 """
+)
 
 with tempfile.TemporaryDirectory(prefix="button-remap-release-") as directory:
     path = Path(directory)
     (path / "test.cpp").write_text(harness)
-    subprocess.run(["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
-                    str(path / "test.cpp"), "-o", str(path / "test")], check=True)
+    subprocess.run(
+        ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror", str(path / "test.cpp"), "-o", str(path / "test")],
+        check=True,
+    )
     subprocess.run([str(path / "test")], check=True)
 print("Button remapping release tests passed")

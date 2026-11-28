@@ -220,6 +220,7 @@ def parse_memory_line(line: str) -> tuple[int | None, int | None, int | None]:
     Format: Free: N bytes, Total: N bytes, Min Free: N bytes, MaxAlloc: N bytes
     Returns: (free_bytes, total_bytes, max_alloc_bytes)
     """
+
     def _find(pattern: str) -> int | None:
         m = re.search(pattern, line)
         if m:
@@ -251,14 +252,9 @@ def serial_worker(ser, kwargs: dict[str, str]) -> None:
             f"This may result in no output.{Style.RESET_ALL}"
         )
     if filter_keyword:
-        print(
-            f"{Fore.YELLOW}Filtering lines to only show those containing: "
-            f"'{filter_keyword}'{Style.RESET_ALL}"
-        )
+        print(f"{Fore.YELLOW}Filtering lines to only show those containing: '{filter_keyword}'{Style.RESET_ALL}")
     if suppress:
-        print(
-            f"{Fore.YELLOW}Suppressing lines containing: '{suppress}'{Style.RESET_ALL}"
-        )
+        print(f"{Fore.YELLOW}Suppressing lines containing: '{suppress}'{Style.RESET_ALL}")
 
     expecting_screenshot = False
     screenshot_size = 0
@@ -277,15 +273,11 @@ def serial_worker(ser, kwargs: dict[str, str]) -> None:
                         # We need to rotate the image because the raw data is in landscape mode
                         img = img.transpose(Image.ROTATE_270)
                         img.save("screenshot.bmp")
-                        print(
-                            f"{Fore.GREEN}Screenshot saved to screenshot.bmp{Style.RESET_ALL}"
-                        )
+                        print(f"{Fore.GREEN}Screenshot saved to screenshot.bmp{Style.RESET_ALL}")
                     else:
                         with open("screenshot.raw", "wb") as f:
                             f.write(screenshot_data)
-                        print(
-                            f"{Fore.GREEN}Screenshot saved to screenshot.raw (PIL not available){Style.RESET_ALL}"
-                        )
+                        print(f"{Fore.GREEN}Screenshot saved to screenshot.raw (PIL not available){Style.RESET_ALL}")
                     expecting_screenshot = False
                     screenshot_data = b""
             else:
@@ -335,9 +327,7 @@ def serial_worker(ser, kwargs: dict[str, str]) -> None:
                     print(f"{line_color}{formatted_line}")
 
                 except (OSError, UnicodeDecodeError):
-                    print(
-                        f"{Fore.RED}Device disconnected or data error.{Style.RESET_ALL}"
-                    )
+                    print(f"{Fore.RED}Device disconnected or data error.{Style.RESET_ALL}")
                     break
     except KeyboardInterrupt:
         # If thread is killed violently (e.g. main exit), silence errors
@@ -443,9 +433,7 @@ def get_auto_detected_port() -> list[str]:
             port.device
             for port in found_ports
             if any(pat in port.description for pat in pattern_list)
-            or port.hwid.startswith(
-                "USB VID:PID=303A:1001"
-            )  # Add specific VID:PID for XTEINK X4
+            or port.hwid.startswith("USB VID:PID=303A:1001")  # Add specific VID:PID for XTEINK X4
         ]
 
     return port_list
@@ -478,9 +466,7 @@ def main() -> None:
             print(f"{Fore.YELLOW}Multiple serial ports found:{Style.RESET_ALL}")
             for p in port_list:
                 print(f"  - {p}")
-            print(
-                f"{Fore.YELLOW}Please specify the desired port as a command-line argument.{Style.RESET_ALL}"
-            )
+            print(f"{Fore.YELLOW}Please specify the desired port as a command-line argument.{Style.RESET_ALL}")
     if port is None:
         print(f"{Fore.RED}Error: No suitable serial port found.{Style.RESET_ALL}")
         sys.exit(1)
@@ -519,9 +505,7 @@ def main() -> None:
         styles = list(mplstyle.available)
         for default_style in default_styles:
             if default_style in styles:
-                print(
-                    f"\n{Fore.CYAN}--- Using Matplotlib style: {default_style} ---{Style.RESET_ALL}"
-                )
+                print(f"\n{Fore.CYAN}--- Using Matplotlib style: {default_style} ---{Style.RESET_ALL}")
                 mplstyle.use(default_style)
                 break
     except (AttributeError, ValueError):
@@ -530,14 +514,10 @@ def main() -> None:
     fig = plt.figure(figsize=(10, 6))
 
     # Update graph every 1000ms
-    _ = animation.FuncAnimation(
-        fig, update_graph, interval=1000, cache_frame_data=False
-    )
+    _ = animation.FuncAnimation(fig, update_graph, interval=1000, cache_frame_data=False)
 
     try:
-        print(
-            f"{Fore.YELLOW}Starting Graph Window... (Close window or press Ctrl-C to exit){Style.RESET_ALL}"
-        )
+        print(f"{Fore.YELLOW}Starting Graph Window... (Close window or press Ctrl-C to exit){Style.RESET_ALL}")
         plt.show()
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}Exiting...{Style.RESET_ALL}")

@@ -1,17 +1,16 @@
 """Run with python3 test/test_list_viewport.py (requires a host C++ compiler)."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 # Compile the production method without the activity's hardware dependencies.
 source = (ROOT / "src/activities/UiListActivity.cpp").read_text()
 method = source.split("void UiListActivity::syncListViewport(", 1)[1]
-method = "void UiListActivity::syncListViewport(" + method.split(
-    "\nvoid UiListActivity::drawChrome", 1
-)[0]
-harness = r"""
+method = "void UiListActivity::syncListViewport(" + method.split("\nvoid UiListActivity::drawChrome", 1)[0]
+harness = (
+    r"""
 #include <components/lists/list.h>
 #include <cassert>
 namespace fui = freeink::ui;
@@ -28,7 +27,9 @@ struct UiListActivity {
   int listCount() const { return count; }
   void syncListViewport(UiScreen&, fui::ListProps&, int = 0);
 };
-""" + method + r"""
+"""
+    + method
+    + r"""
 int main() {
   for (int offset : {0, 1}) {
     UiListActivity activity;
@@ -59,15 +60,23 @@ int main() {
   }
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "viewport.cpp"
     executable = Path(directory) / "viewport"
     cpp.write_text("#include <initializer_list>\n" + harness)
-    subprocess.run([
-        "c++", "-std=c++17", "-I",
-        str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"),
-        str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/src/FreeInkUI.cpp"),
-        str(cpp), "-o", str(executable),
-    ], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++17",
+            "-I",
+            str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"),
+            str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/src/FreeInkUI.cpp"),
+            str(cpp),
+            "-o",
+            str(executable),
+        ],
+        check=True,
+    )
     subprocess.run([str(executable)], check=True)
 print("List viewport regression checks passed")

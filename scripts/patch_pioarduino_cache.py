@@ -3,7 +3,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-
 COMPONENT_OPTIONS = ("custom_component_add", "custom_component_remove")
 
 
@@ -27,6 +26,7 @@ def build_cache_request(requested, memory_fingerprint, component_options):
 if "--self-test" in sys.argv:
     assert cache_matches("CONFIG_A=y\nCONFIG_B=n", "CONFIG_A=y\nCONFIG_B=n")
     assert not cache_matches("CONFIG_A=y", "CONFIG_A=y\nCONFIG_B=n")
+
     def removing(value, requested="CONFIG_A=y"):
         return build_cache_request(requested, "fp", [("custom_component_remove", value)])
 
@@ -38,18 +38,18 @@ if "--self-test" in sys.argv:
     raise SystemExit(0)
 
 
-Import("env")  # noqa: F821 -- provided by PlatformIO
+Import("env")
 
 platform = env.PioPlatform()
 builder = Path(platform.get_dir()) / "builder" / "frameworks" / "arduino.py"
 source = builder.read_text(encoding="utf-8")
 # The package already stores libraries per chip; only its cache-presence check is global.
-old_check = '''flag_any_custom_sdkconfig = (FRAMEWORK_LIB_DIR is not None and 
-                            exists(str(Path(FRAMEWORK_LIB_DIR) / "sdkconfig")))'''
-new_check = '''flag_any_custom_sdkconfig = (
+old_check = """flag_any_custom_sdkconfig = (FRAMEWORK_LIB_DIR is not None and
+                            exists(str(Path(FRAMEWORK_LIB_DIR) / "sdkconfig")))"""
+new_check = """flag_any_custom_sdkconfig = (
     FRAMEWORK_LIB_DIR is not None
     and exists(str(Path(FRAMEWORK_LIB_DIR) / chip_variant / "sdkconfig.orig"))
-)'''
+)"""
 
 # pioarduino 55.03.39 removed trailing whitespace from the same expression.
 if old_check not in source:
@@ -83,24 +83,16 @@ request_file = framework_libs / chip_variant / "sdkconfig.crosspoint"
 
 rebuild = bool(requested.strip())
 if original_sdkconfig.is_file():
-    cached_request = (
-        request_file.read_text(encoding="utf-8") if request_file.is_file() else ""
-    )
+    cached_request = request_file.read_text(encoding="utf-8") if request_file.is_file() else ""
     if cache_matches(cache_request, cached_request):
         rebuild = False
-        marker = "# TASMOTA__" + hashlib.md5(
-            (requested.strip() + mcu + memory_fingerprint).encode("utf-8")
-        ).hexdigest()[:16]
-        defaults = Path(env.subst("$PROJECT_DIR")) / "sdkconfig.defaults"
-        lines = (
-            defaults.read_text(encoding="utf-8").splitlines()
-            if defaults.exists()
-            else []
+        marker = (
+            "# TASMOTA__" + hashlib.md5((requested.strip() + mcu + memory_fingerprint).encode("utf-8")).hexdigest()[:16]
         )
+        defaults = Path(env.subst("$PROJECT_DIR")) / "sdkconfig.defaults"
+        lines = defaults.read_text(encoding="utf-8").splitlines() if defaults.exists() else []
         if not lines or lines[0] != marker:
-            defaults.write_text(
-                "\n".join([marker, *lines[1:]]) + "\n", encoding="utf-8"
-            )
+            defaults.write_text("\n".join([marker, *lines[1:]]) + "\n", encoding="utf-8")
             print(f"Restored cached Arduino framework for {mcu}")
     elif requested.strip():
         # Recompile only this chip from its original template after config changes.
@@ -111,8 +103,9 @@ if rebuild and not board.get("build.esp-idf.sdkconfig_path", ""):
     # Resolved Kconfig values override sdkconfig.defaults, even across SDK upgrades.
     # Only reset the generated file for this environment; explicit paths are user-owned.
     resolved = Path(env.subst("$PROJECT_DIR")) / f"sdkconfig.{env.subst('$PIOENV')}"
-    if resolved.is_file() and "# Automatically generated file. DO NOT EDIT." in (
-        resolved.read_text(encoding="utf-8").splitlines()[:5]
+    if (
+        resolved.is_file()
+        and "# Automatically generated file. DO NOT EDIT." in (resolved.read_text(encoding="utf-8").splitlines()[:5])
     ):
         resolved.unlink()
         print(f"Reset generated SDK configuration: {resolved.name}")

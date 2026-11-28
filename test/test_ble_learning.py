@@ -1,14 +1,19 @@
 """Run with python3 test/test_ble_learning.py (requires a host C++ compiler)."""
-from pathlib import Path
+
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/activities/settings/BleSettingsActivity.cpp").read_text()
-method = "void BleSettingsActivity::stepLearning()" + source.split(
-    "void BleSettingsActivity::stepLearning()", 1
-)[1].split("void BleSettingsActivity::keepLearned", 1)[0]
-harness = r"""
+method = (
+    "void BleSettingsActivity::stepLearning()"
+    + source.split("void BleSettingsActivity::stepLearning()", 1)[1].split("void BleSettingsActivity::keepLearned", 1)[
+        0
+    ]
+)
+harness = (
+    r"""
 #include <cassert>
 #include <cstring>
 #include <deque>
@@ -36,7 +41,9 @@ struct BleSettingsActivity {
   void keepLearned(bool hold) { saved = hold; learnAction = bleturner::Action::None; }
   void stepLearning();
 };
-""" + method + r"""
+"""
+    + method
+    + r"""
 void press(BleSettingsActivity& screen) {
   bleturner::Event event{};
   event.code = 0x030002; event.pressed = true; event.atMs = clockMs;
@@ -74,12 +81,24 @@ int main() {
   assert(noPress.saved == -1 && noPress.learnAction == bleturner::Action::None);
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "learning.cpp"
     executable = Path(directory) / "learning"
     cpp.write_text(harness)
-    subprocess.run(["c++", "-std=c++20", "-I", str(ROOT / "lib/BlePageTurner/include"),
-                    "-I", str(ROOT / "freeink-sdk/libs/network/BleKeyboardHost/include"),
-                    str(cpp), "-o", str(executable)], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++20",
+            "-I",
+            str(ROOT / "lib/BlePageTurner/include"),
+            "-I",
+            str(ROOT / "freeink-sdk/libs/network/BleKeyboardHost/include"),
+            str(cpp),
+            "-o",
+            str(executable),
+        ],
+        check=True,
+    )
     subprocess.run([str(executable)], check=True)
 print("Bluetooth learning regression checks passed")

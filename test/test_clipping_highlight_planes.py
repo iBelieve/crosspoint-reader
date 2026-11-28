@@ -1,15 +1,22 @@
 """Run with python3 test/test_clipping_highlight_planes.py (requires a host C++ compiler)."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/activities/reader/EpubReaderActivity.cpp").read_text()
-fill = "const auto fillHighlight =" + source.split("const auto fillHighlight =", 1)[1].split("\n  uint16_t pageWordIndex", 1)[0]
-render = "auto renderGrayscalePass =" + source.split("auto renderGrayscalePass =", 1)[1].split("\n\n  if (pageHasImagesNeedingDecode)", 1)[0]
+fill = (
+    "const auto fillHighlight ="
+    + source.split("const auto fillHighlight =", 1)[1].split("\n  uint16_t pageWordIndex", 1)[0]
+)
+render = (
+    "auto renderGrayscalePass ="
+    + source.split("auto renderGrayscalePass =", 1)[1].split("\n\n  if (pageHasImagesNeedingDecode)", 1)[0]
+)
 pair_condition = "grayPlanes && " + source.split("if (grayPlanes && ", 1)[1].split(") {", 1)[0]
-harness = r"""
+harness = (
+    r"""
 #include <cassert>
 #include <memory>
 struct BoardConfig {
@@ -30,7 +37,9 @@ struct GfxRenderer {
 };
 int main() {
   GfxRenderer renderer;
-""" + fill + r"""
+"""
+    + fill
+    + r"""
   for (bool a4 : {false, true}) {
     BoardConfig::a4 = a4;
     for (auto mode : {GfxRenderer::BW, GfxRenderer::GRAYSCALE_LSB, GfxRenderer::GRAYSCALE_MSB}) {
@@ -53,7 +62,9 @@ int main() {
   auto page = std::make_unique<Page>(order);
   bool grayPlanes = true;
   [[maybe_unused]] bool drewClippingHighlights = true;
-  auto usePairedPass = [&] { return """ + pair_condition + r"""; };
+  auto usePairedPass = [&] { return """
+    + pair_condition
+    + r"""; };
   BoardConfig::a4 = true;
   assert(!usePairedPass());
   drewClippingHighlights = false;
@@ -71,7 +82,9 @@ int main() {
   bool needsTextGrayscale = true;
   auto drawClippingHighlights = [&](Page&, int, int, int) { assert(++order == 1); };
   auto renderStatusBar = [&] { assert(++order == 3); };
-""" + render + r"""
+"""
+    + render
+    + r"""
   BoardConfig::a4 = true;
   renderGrayscalePass();
   assert(order == 3);
@@ -81,6 +94,7 @@ int main() {
   assert(order == 3);
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "highlight.cpp"
     executable = Path(directory) / "highlight"

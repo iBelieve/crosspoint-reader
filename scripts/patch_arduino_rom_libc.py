@@ -6,6 +6,7 @@ esp32c3/pioarduino-build.py. Selecting ROM libc therefore also requires updating
 those flags. Remove this hook once pioarduino derives the application's libc
 linker flags from the rebuilt SDK configuration.
 """
+
 from pathlib import Path
 
 
@@ -50,5 +51,5 @@ def configure_rom_libc(env):
     env.Replace(LINKFLAGS=filtered)
 
 
-Import("env")  # noqa: F821 -- provided by PlatformIO
-configure_rom_libc(env)  # noqa: F821
+Import("env")
+configure_rom_libc(env)

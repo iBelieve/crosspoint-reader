@@ -2,10 +2,11 @@
 
 Run: python3 test/test_recursive_dictionary.py (requires a C++20 compiler).
 """
-from pathlib import Path
+
 import re
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 viewer = (ROOT / "src/activities/reader/DictionaryDefinitionActivity.cpp").read_text()
@@ -21,30 +22,37 @@ def block(source, signature, semicolon=False):
     while depth:
         depth += (source[end] == "{") - (source[end] == "}")
         end += 1
-    return source[start:end + int(semicolon)]
+    return source[start : end + int(semicolon)]
 
 
-methods = "\n".join(block(viewer, signature) for signature in (
-    "bool DictionaryDefinitionActivity::prepareDefinition",
-    "bool DictionaryDefinitionActivity::layoutHtmlPages",
-    "int DictionaryDefinitionActivity::measureSpan",
-    "bool DictionaryDefinitionActivity::reserveLines",
-    "bool DictionaryDefinitionActivity::wrapText",
-    "bool DictionaryDefinitionActivity::prepareFont",
-    "void DictionaryDefinitionActivity::showMessage",
-    "bool DictionaryDefinitionActivity::restoreCurrentDefinition",
-    "void DictionaryDefinitionActivity::navigateDefinition",
-    "bool DictionaryDefinitionActivity::buildPlainSelectionPages",
-    "void DictionaryDefinitionActivity::startSelection",
-))
-structs = "\n".join(block(header, f"struct {name} {{", True) for name in (
-    "Line", "BodyArea", "Definition", "HistoryEntry", "LookupState"
-))
+methods = "\n".join(
+    block(viewer, signature)
+    for signature in (
+        "bool DictionaryDefinitionActivity::prepareDefinition",
+        "bool DictionaryDefinitionActivity::layoutHtmlPages",
+        "int DictionaryDefinitionActivity::measureSpan",
+        "bool DictionaryDefinitionActivity::reserveLines",
+        "bool DictionaryDefinitionActivity::wrapText",
+        "bool DictionaryDefinitionActivity::prepareFont",
+        "void DictionaryDefinitionActivity::showMessage",
+        "bool DictionaryDefinitionActivity::restoreCurrentDefinition",
+        "void DictionaryDefinitionActivity::navigateDefinition",
+        "bool DictionaryDefinitionActivity::buildPlainSelectionPages",
+        "void DictionaryDefinitionActivity::startSelection",
+    )
+)
+structs = "\n".join(
+    block(header, f"struct {name} {{", True)
+    for name in ("Line", "BodyArea", "Definition", "HistoryEntry", "LookupState")
+)
 location = block((ROOT / "src/util/Dictionary.h").read_text(), "struct DictLocation {", True)
 entry = block((ROOT / "src/util/Dictionary.h").read_text(), "struct DictEntry {", True)
 entry_list = block((ROOT / "src/util/Dictionary.h").read_text(), "class DictEntryList {", True)
-marker = next(line for line in (ROOT / "src/util/Dictionary.h").read_text().splitlines()
-              if "DICTIONARY_PLAIN_HEADWORD_MARKER =" in line)
+marker = next(
+    line
+    for line in (ROOT / "src/util/Dictionary.h").read_text().splitlines()
+    if "DICTIONARY_PLAIN_HEADWORD_MARKER =" in line
+)
 selection = block(selector, "struct Selection {", True)
 plain_scratch = block(viewer, "struct DictionaryDefinitionActivity::PlainSelectionLine {", True)
 constants = viewer.split("namespace {", 1)[1].split("}  // namespace", 1)[0]
@@ -59,12 +67,17 @@ lookup_source = (ROOT / "src/activities/reader/DictionaryWordSelectActivity.cpp"
 definition_result = block(lookup_source, "[this](const ActivityResult& result)")
 reader_source = (ROOT / "src/activities/reader/EpubReaderActivity.cpp").read_text()
 return_selection_for = block(reader_source, "ClipSelectionActivity::Selection lookupReturnSelectionFor")
-lookup_result = block(reader_source.split("startActivityForResult(std::move(lookup)", 1)[1],
-                      "[this](const ActivityResult& result)")
-reader_constants = (ROOT / "src/activities/reader/ReaderUtils.h").read_text().split("namespace ReaderUtils {", 1)[1].split(
-    "constexpr unsigned long SKIP_HOLD_MS", 1
-)[0]
-harness = r'''
+lookup_result = block(
+    reader_source.split("startActivityForResult(std::move(lookup)", 1)[1], "[this](const ActivityResult& result)"
+)
+reader_constants = (
+    (ROOT / "src/activities/reader/ReaderUtils.h")
+    .read_text()
+    .split("namespace ReaderUtils {", 1)[1]
+    .split("constexpr unsigned long SKIP_HOLD_MS", 1)[0]
+)
+harness = (
+    r"""
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -85,7 +98,14 @@ harness = r'''
 template<typename... Args> void logDebug(Args&&...) {}
 #define LOG_DBG(...) logDebug(__VA_ARGS__)
 
-''' + constants + '\nnamespace ReaderUtils {\n' + reader_constants + '}\n' + marker + '\n' + r'''
+"""
+    + constants
+    + "\nnamespace ReaderUtils {\n"
+    + reader_constants
+    + "}\n"
+    + marker
+    + "\n"
+    + r"""
 
 enum class StrId { STR_DICT_LOOKING_UP, STR_DICT_NOT_FOUND, STR_DICT_LOW_MEMORY, STR_DICT_READ_FAILED,
                    STR_DICT_DECOMPRESS_ERROR, STR_DICT_RESTORE_FAILED, STR_DICT_HISTORY_FULL };
@@ -174,7 +194,9 @@ struct MappedInputManager {
     return true;
   }
 };
-''' + location + r'''
+"""
+    + location
+    + r"""
 struct Dictionary {
   enum class LookupResult { Found, NotFound, LowMemory, ReadError, Decompress };
   std::map<uint32_t, std::string> entries;
@@ -205,10 +227,14 @@ struct Dictionary {
   std::string lastQuery;
 };
 struct ClipSelectionActivity {
-''' + selection + r'''
+"""
+    + selection
+    + r"""
   template<typename... Args> explicit ClipSelectionActivity(Args&&...) {}
 };
-''' + return_selection_for + r'''
+"""
+    + return_selection_for
+    + r"""
 bool styledAvailable = false;
 bool buildDictionaryHtmlPages(Renderer& renderer, const std::string&, uint16_t, uint16_t,
                                std::vector<std::unique_ptr<Page>>& pages) {
@@ -220,7 +246,9 @@ bool buildDictionaryHtmlPages(Renderer& renderer, const std::string&, uint16_t, 
 std::string htmlToPlainText(std::string text, char) { return text; }
 struct DictionaryDefinitionActivity {
   struct PlainSelectionLine;
-''' + structs + r'''
+"""
+    + structs
+    + r"""
   Renderer renderer;
   MappedInputManager mappedInput;
   bool htmlDefinition = false;
@@ -242,9 +270,15 @@ struct DictionaryDefinitionActivity {
   void finish() { finished = true; }
   void setResult(ActivityResult&& next) { result = std::move(next); }
   void openDictionaryWordSelect() { selectionOpened = true; }
-  void handleBack() { ''' + back_handler + r''' }
-  void onDefinitionResult(const ActivityResult& child) { (''' + definition_result + r''')(child); }
-  void onLookupResult(const ActivityResult& child) { (''' + lookup_result + r''')(child); }
+  void handleBack() { """
+    + back_handler
+    + r""" }
+  void onDefinitionResult(const ActivityResult& child) { ("""
+    + definition_result
+    + r""")(child); }
+  void onLookupResult(const ActivityResult& child) { ("""
+    + lookup_result
+    + r""")(child); }
   void startActivityForResult(std::unique_ptr<ClipSelectionActivity> next, ActivityResultHandler handler) {
     child = std::move(next);
     callback = std::move(handler);
@@ -261,7 +295,9 @@ struct DictionaryDefinitionActivity {
   bool buildPlainSelectionPages();
   void startSelection(int x = -1, int y = -1);
 };
-''' + methods + r'''
+"""
+    + methods
+    + r"""
 int main() {
   {
     DictionaryDefinitionActivity rtlView;
@@ -539,13 +575,16 @@ int main() {
     }
   }
 }
-'''
+"""
+)
 
 dictionary_source = (ROOT / "src/util/Dictionary.cpp").read_text()
-lookup_methods = "\n".join(block(dictionary_source, name) for name in (
-    "std::string Dictionary::cleanWord", "void Dictionary::stemVariants", "bool Dictionary::lookup"
-))
-lookup_harness = r'''
+lookup_methods = "\n".join(
+    block(dictionary_source, name)
+    for name in ("std::string Dictionary::cleanWord", "void Dictionary::stemVariants", "bool Dictionary::lookup")
+)
+lookup_harness = (
+    r"""
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -574,7 +613,15 @@ struct TxtToHtml {
   static size_t escapedHtmlSize(std::string_view text) { return text.size(); }
   static void appendEscapedHtml(std::string& out, std::string_view text) { out.append(text); }
 };
-''' + location + '\n' + marker + '\n' + entry + '\n' + entry_list + r'''
+"""
+    + location
+    + "\n"
+    + marker
+    + "\n"
+    + entry
+    + "\n"
+    + entry_list
+    + r"""
 class Dictionary {
  public:
   enum class LookupResult { Found, NotFound, LowMemory, Decompress, ReadError };
@@ -601,7 +648,9 @@ class Dictionary {
   static void stemVariants(const std::string&, std::vector<std::string>&);
   bool lookup(const char*, std::string&, std::string&, LookupResult*);
 };
-''' + lookup_methods + r'''
+"""
+    + lookup_methods
+    + r"""
 int main() {
   Dictionary dictionary;
   std::string definition = "unchanged", headword = "unchanged";
@@ -653,30 +702,65 @@ int main() {
     assert(result == Dictionary::LookupResult::NotFound && dictionary.searches > 1);
   }
 }
-'''
+"""
+)
 
-harness = harness.replace('bool DictionaryDefinitionActivity::prepareDefinition',
-                          plain_scratch + '\nbool DictionaryDefinitionActivity::prepareDefinition', 1)
+harness = harness.replace(
+    "bool DictionaryDefinitionActivity::prepareDefinition",
+    plain_scratch + "\nbool DictionaryDefinitionActivity::prepareDefinition",
+    1,
+)
 with tempfile.TemporaryDirectory() as directory:
     path = Path(directory)
     (path / "navigation.cpp").write_text(harness)
     subprocess.run(["cc", "-c", str(ROOT / "lib/MiniBidi/minibidi.c"), "-o", str(path / "minibidi.o")], check=True)
-    subprocess.run([
-        "c++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
-        "-I", str(ROOT / "src"), "-I", str(ROOT / "lib/Memory"),
-        "-I", str(ROOT / "lib/MiniBidi"), "-I", str(ROOT / "lib/Utf8"),
-        "-I", str(ROOT / "test/minibidi_arabic/stubs"),
-        str(path / "navigation.cpp"), str(path / "minibidi.o"),
-        str(ROOT / "lib/MiniBidi/BidiUtils.cpp"), str(ROOT / "lib/Utf8/Utf8.cpp"),
-        "-o", str(path / "navigation"),
-    ], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I",
+            str(ROOT / "src"),
+            "-I",
+            str(ROOT / "lib/Memory"),
+            "-I",
+            str(ROOT / "lib/MiniBidi"),
+            "-I",
+            str(ROOT / "lib/Utf8"),
+            "-I",
+            str(ROOT / "test/minibidi_arabic/stubs"),
+            str(path / "navigation.cpp"),
+            str(path / "minibidi.o"),
+            str(ROOT / "lib/MiniBidi/BidiUtils.cpp"),
+            str(ROOT / "lib/Utf8/Utf8.cpp"),
+            "-o",
+            str(path / "navigation"),
+        ],
+        check=True,
+    )
     subprocess.run([str(path / "navigation")], check=True)
     (path / "lookup.cpp").write_text(lookup_harness)
-    subprocess.run(["c++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
-                    "-I", str(ROOT / "lib/Epub/Epub"), "-I", str(ROOT / "lib/Utf8"),
-                    str(path / "lookup.cpp"),
-                    str(ROOT / "lib/Utf8/Utf8.cpp"), str(ROOT / "lib/Epub/Epub/CjkBreaks.cpp"),
-                    str(ROOT / "lib/Epub/Epub/hyphenation/HyphenationCommon.cpp"),
-                    "-o", str(path / "lookup")], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I",
+            str(ROOT / "lib/Epub/Epub"),
+            "-I",
+            str(ROOT / "lib/Utf8"),
+            str(path / "lookup.cpp"),
+            str(ROOT / "lib/Utf8/Utf8.cpp"),
+            str(ROOT / "lib/Epub/Epub/CjkBreaks.cpp"),
+            str(ROOT / "lib/Epub/Epub/hyphenation/HyphenationCommon.cpp"),
+            "-o",
+            str(path / "lookup"),
+        ],
+        check=True,
+    )
     subprocess.run([str(path / "lookup")], check=True)
 print("Recursive dictionary navigation checks passed")

@@ -4,7 +4,6 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
 
-
 OUTPUT = Path(__file__).with_name("font-prewarm-benchmark.epub")
 FIXED_TIME = (2026, 1, 1, 0, 0, 0)
 SAMPLE_COUNT = 240
@@ -33,10 +32,7 @@ def sample_chapter(mixed_styles: bool) -> str:
     bold_italic = "NOPQRSTUVWXYZ NOPQRSTUVWXYZ"
 
     if mixed_styles:
-        sample = (
-            f'{regular}<strong>{bold}</strong><em>{italic}</em>'
-            f'<strong><em>{bold_italic}</em></strong>'
-        )
+        sample = f"{regular}<strong>{bold}</strong><em>{italic}</em><strong><em>{bold_italic}</em></strong>"
     else:
         sample = regular + bold + italic + bold_italic
 

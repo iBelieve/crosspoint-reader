@@ -1,4 +1,4 @@
-Import("env")  # noqa: F821 -- provided by PlatformIO
+Import("env")
 
 # The C61 Arduino skeleton omits CPU flags, defaulting to unsupported F/D instructions.
 ISA_FLAGS = ["-march=rv32imac_zicsr_zifencei", "-mabi=ilp32"]

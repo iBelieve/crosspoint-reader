@@ -5,10 +5,11 @@ copy helper against small host stubs.
 
 Run: python3 test/test_dictionary_setting_name.py (requires a C++20 compiler).
 """
-from pathlib import Path
+
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 settings_list = (ROOT / "src/SettingsList.h").read_text()
@@ -114,7 +115,8 @@ with tempfile.TemporaryDirectory(prefix="dictionary-setting-") as directory:
     source = Path(directory) / "test.cpp"
     executable = Path(directory) / "test"
     source.write_text(program)
-    subprocess.run([os.environ.get("CXX", "c++"), "-std=c++20", "-Wall", "-Wextra", str(source), "-o",
-                    str(executable)], check=True)
+    subprocess.run(
+        [os.environ.get("CXX", "c++"), "-std=c++20", "-Wall", "-Wextra", str(source), "-o", str(executable)], check=True
+    )
     subprocess.run([str(executable)], check=True)
 print("Dictionary setting name regression checks passed")

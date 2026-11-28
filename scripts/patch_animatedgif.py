@@ -7,7 +7,6 @@ import os
 import re
 import sys
 
-
 OLD_SNIPPET = """#define MAX_COLORS 256
 #ifdef __LINUX__
 #define MAX_WIDTH 2048
@@ -81,29 +80,21 @@ COPY_NEW = """#ifdef ALLOWS_UNALIGNED
 
 
 def _patch_header(header_path):
-    with open(header_path, "r", encoding="utf-8") as file:
+    with open(header_path, encoding="utf-8") as file:
         text = file.read()
 
     max_width_define = MAX_WIDTH_DEFINE_RE.search(text)
     max_width_guard = MAX_WIDTH_GUARD_RE.search(text)
     if NEW_SNIPPET in text or (
-        max_width_define
-        and max_width_guard
-        and max_width_guard.start() < max_width_define.start()
+        max_width_define and max_width_guard and max_width_guard.start() < max_width_define.start()
     ):
         return True
 
     if OLD_SNIPPET not in text:
         if not max_width_define:
-            sys.stderr.write(
-                "WARNING: AnimatedGIF no longer defines MAX_WIDTH in %s\n"
-                % header_path
-            )
+            sys.stderr.write(f"WARNING: AnimatedGIF no longer defines MAX_WIDTH in {header_path}\n")
             return True
-        sys.stderr.write(
-            "ERROR: AnimatedGIF has an unguarded MAX_WIDTH definition in %s\n"
-            % header_path
-        )
+        sys.stderr.write(f"ERROR: AnimatedGIF has an unguarded MAX_WIDTH definition in {header_path}\n")
         raise SystemExit(1)
 
     with open(header_path, "w", encoding="utf-8") as file:
@@ -114,7 +105,7 @@ def _patch_header(header_path):
 
 
 def _patch_decoder(source_path):
-    with open(source_path, "r", encoding="utf-8") as file:
+    with open(source_path, encoding="utf-8") as file:
         original = file.read()
     text = original
     for name, before, after in (
@@ -124,7 +115,7 @@ def _patch_decoder(source_path):
         if after in text:
             continue
         if text.count(before) != 1:
-            raise RuntimeError("AnimatedGIF %s patch does not match %s" % (name, source_path))
+            raise RuntimeError(f"AnimatedGIF {name} patch does not match {source_path}")
         text = text.replace(before, after, 1)
     if text != original:
         with open(source_path, "w", encoding="utf-8") as file:
@@ -159,9 +150,9 @@ def patch_animatedgif_before_link(source, target, env):
 
 
 if "Import" in globals():
-    Import("env")  # noqa: F821 (SCons-injected global)
-    patch_animatedgif(env, require_found=False)  # noqa: F821
-    env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", patch_animatedgif_before_link)  # noqa: F821
+    Import("env")
+    patch_animatedgif(env, require_found=False)
+    env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", patch_animatedgif_before_link)
 elif __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("library_path")
