@@ -680,25 +680,28 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
 
   // Style (alignment + margins/padding/indent)
   BlockStyle& blockStyle = block->blockStyle;
-  serialization::readPod(file, blockStyle.alignment);
-  serialization::readPod(file, blockStyle.textAlignDefined);
-  serialization::readPod(file, blockStyle.marginTop);
-  serialization::readPod(file, blockStyle.marginBottom);
-  serialization::readPod(file, blockStyle.marginLeft);
-  serialization::readPod(file, blockStyle.marginRight);
-  serialization::readPod(file, blockStyle.paddingTop);
-  serialization::readPod(file, blockStyle.paddingBottom);
-  serialization::readPod(file, blockStyle.paddingLeft);
-  serialization::readPod(file, blockStyle.paddingRight);
-  serialization::readPod(file, blockStyle.textIndent);
-  serialization::readPod(file, blockStyle.textIndentDefined);
-  serialization::readPod(file, blockStyle.isRtl);
-  serialization::readPod(file, blockStyle.directionDefined);
-  serialization::readPod(file, blockStyle.characterSpacing);
-  serialization::readPod(file, blockStyle.fontId);
-
   uint8_t hasWordFonts = 0;
-  serialization::readPod(file, hasWordFonts);
+  const bool styleRead = serialization::tryReadPod(file, blockStyle.alignment) &&
+                         serialization::tryReadPod(file, blockStyle.textAlignDefined) &&
+                         serialization::tryReadPod(file, blockStyle.marginTop) &&
+                         serialization::tryReadPod(file, blockStyle.marginBottom) &&
+                         serialization::tryReadPod(file, blockStyle.marginLeft) &&
+                         serialization::tryReadPod(file, blockStyle.marginRight) &&
+                         serialization::tryReadPod(file, blockStyle.paddingTop) &&
+                         serialization::tryReadPod(file, blockStyle.paddingBottom) &&
+                         serialization::tryReadPod(file, blockStyle.paddingLeft) &&
+                         serialization::tryReadPod(file, blockStyle.paddingRight) &&
+                         serialization::tryReadPod(file, blockStyle.textIndent) &&
+                         serialization::tryReadPod(file, blockStyle.textIndentDefined) &&
+                         serialization::tryReadPod(file, blockStyle.isRtl) &&
+                         serialization::tryReadPod(file, blockStyle.directionDefined) &&
+                         serialization::tryReadPod(file, blockStyle.characterSpacing) &&
+                         serialization::tryReadPod(file, blockStyle.fontId) &&
+                         serialization::tryReadPod(file, hasWordFonts);
+  if (!styleRead) {
+    LOG_ERR("TXB", "Deserialization failed: truncated block style");
+    return nullptr;
+  }
   if (hasWordFonts > 1) {
     LOG_ERR("TXB", "Deserialization failed: bad word font flag %u", hasWordFonts);
     return nullptr;

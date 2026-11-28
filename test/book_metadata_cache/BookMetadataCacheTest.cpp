@@ -218,3 +218,48 @@ TEST(BookMetadataCacheStrings, OverLongStringsAreCutAndTheRestStillLoads) {
   EXPECT_EQ(cache.getTocEntry(1).title, "Chapter 1");
   EXPECT_EQ(cache.getSpineEntry(2).href, chapterHref(2));
 }
+
+// A spine href the entry readers would reject makes load() fail, so the book is rebuilt.
+TEST(BookMetadataCacheStrings, LoadRejectsASpineHrefOverTheLimit) {
+  const ScopedTempDir tempDir;
+  const auto cacheDir = tempDir.path().string();
+  buildBook(cacheDir, 600);
+  const auto path = tempDir.path() / "book.bin";
+  std::string bytes;
+  {
+    std::ifstream in(path, std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+  }
+  const size_t href = bytes.find(chapterHref(10));
+  ASSERT_NE(href, std::string::npos);
+  const uint32_t corruptLength = serialization::MAX_STRING_BYTES + 1;
+  ASSERT_GT(bytes.size() - href, corruptLength);
+  bytes.replace(href - sizeof(uint32_t), sizeof(uint32_t), reinterpret_cast<const char*>(&corruptLength),
+                sizeof(uint32_t));
+  std::ofstream(path, std::ios::binary | std::ios::trunc) << bytes;
+  BookMetadataCache cache(cacheDir);
+  EXPECT_FALSE(cache.load());
+}
+
+// A cut anchor could match the wrong target, so an over-long one is stored empty (chapter start).
+TEST(BookMetadataCacheStrings, OverLongTocAnchorIsStoredEmpty) {
+  const ScopedTempDir tempDir;
+  const auto cacheDir = tempDir.path().string();
+  zipEntrySizes.clear();
+  {
+    BookMetadataCache cache(cacheDir);
+    ASSERT_TRUE(cache.beginWrite() && cache.beginContentOpfPass());
+    cache.createSpineEntry(chapterHref(0));
+    ASSERT_TRUE(cache.endContentOpfPass() && cache.beginTocPass());
+    cache.createTocEntry("Long", chapterHref(0), std::string(serialization::MAX_STRING_BYTES + 1, 'a'), 1);
+    cache.createTocEntry("Short", chapterHref(0), "note1", 1);
+    ASSERT_TRUE(cache.endTocPass() && cache.endWrite());
+    ASSERT_TRUE(cache.buildBookBin("book.epub", {}));
+  }
+  BookMetadataCache cache(cacheDir);
+  ASSERT_TRUE(cache.load());
+  const auto longEntry = cache.getTocEntry(0);
+  EXPECT_TRUE(longEntry.anchor.empty());
+  EXPECT_EQ(longEntry.spineIndex, 0);
+  EXPECT_EQ(cache.getTocEntry(1).anchor, "note1");
+}

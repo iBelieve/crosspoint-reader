@@ -417,7 +417,8 @@ void ImageBlock::render(GfxRenderer& renderer, const int x, const int y) {
 
 bool ImageBlock::serialize(HalFile& file) {
   serialization::writeString(file, imagePath);
-  serialization::writeString(file, srcPath);
+  // A cut zip path would not extract; an over-long one is dropped and the block shows its placeholder.
+  serialization::writeString(file, srcPath.size() <= serialization::MAX_STRING_BYTES ? srcPath : std::string());
   serialization::writePod(file, width);
   serialization::writePod(file, height);
   return true;

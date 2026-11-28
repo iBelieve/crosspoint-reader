@@ -348,7 +348,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
       serialization::writeString(self->tempItemStore, href);
     }
 
-    if (itemId == self->coverItemId) {
+    if (storable && itemId == self->coverItemId) {
       // Some EPUBs set meta name="cover" to an XHTML wrapper item.
       // Only treat it as a cover image when the manifest media-type is image/*.
       if (startsWithImageMediaType(mediaType)) {

@@ -13,7 +13,7 @@
 #include "FsHelpers.h"
 
 namespace {
-constexpr uint8_t BOOK_CACHE_VERSION = 10;  // v10: ignore ambiguous guide text references
+constexpr uint8_t BOOK_CACHE_VERSION = 11;  // v11: strings capped at serialization::MAX_STRING_BYTES
 constexpr char bookBinFile[] = "/book.bin";
 constexpr char tmpSpineBinFile[] = "/spine.bin.tmp";
 constexpr char tmpTocBinFile[] = "/toc.bin.tmp";
@@ -460,7 +460,9 @@ void BookMetadataCache::createTocEntry(const std::string& title, const std::stri
 
   // Compose the title to NFC at index time so the cache stores precomposed glyphs;
   // device fonts have no combining-mark positioning, so NFD titles render broken.
-  const TocEntry entry(utf8ComposeNfc(title), href, anchor, level, spineIndex);
+  // A cut href or anchor would match the wrong target; an over-long one opens the chapter start.
+  const auto key = [](const std::string& s) { return s.size() <= serialization::MAX_STRING_BYTES ? s : std::string(); };
+  const TocEntry entry(utf8ComposeNfc(title), key(href), key(anchor), level, spineIndex);
   if (passOut) {
     writeTocEntryTo(*passOut, entry);
   } else {
@@ -490,11 +492,11 @@ bool BookMetadataCache::load() {
 
   if (!serialization::tryReadPod(bookFile, lutOffset) || !serialization::tryReadPod(bookFile, spineCount) ||
       !serialization::tryReadPod(bookFile, tocCount) ||
-      !serialization::tryReadString(bookFile, coreMetadata.title, lutOffset) ||
-      !serialization::tryReadString(bookFile, coreMetadata.author, lutOffset) ||
-      !serialization::tryReadString(bookFile, coreMetadata.language, lutOffset) ||
-      !serialization::tryReadString(bookFile, coreMetadata.coverItemHref, lutOffset) ||
-      !serialization::tryReadString(bookFile, coreMetadata.textReferenceHref, lutOffset) ||
+      !serialization::tryReadString(bookFile, coreMetadata.title, serialization::MAX_STRING_BYTES) ||
+      !serialization::tryReadString(bookFile, coreMetadata.author, serialization::MAX_STRING_BYTES) ||
+      !serialization::tryReadString(bookFile, coreMetadata.language, serialization::MAX_STRING_BYTES) ||
+      !serialization::tryReadString(bookFile, coreMetadata.coverItemHref, serialization::MAX_STRING_BYTES) ||
+      !serialization::tryReadString(bookFile, coreMetadata.textReferenceHref, serialization::MAX_STRING_BYTES) ||
       bookFile.position() != lutOffset) {
     return rejectCache();
   }
@@ -586,10 +588,12 @@ BookMetadataCache::SpineEntry BookMetadataCache::getSpineEntry(const int index) 
   }
 
   // Seek to spine LUT item, read from LUT and get out data
-  bookFile.seek(lutOffset + sizeof(uint32_t) * index);
-  uint32_t spineEntryPos;
-  serialization::readPod(bookFile, spineEntryPos);
-  bookFile.seek(spineEntryPos);
+  uint32_t spineEntryPos = 0;
+  if (!bookFile.seek(lutOffset + sizeof(uint32_t) * index) || !serialization::tryReadPod(bookFile, spineEntryPos) ||
+      !bookFile.seek(spineEntryPos)) {
+    LOG_ERR("BMC", "getSpineEntry: cannot read LUT slot %d", index);
+    return {};
+  }
   return readSpineEntry(bookFile);
 }
 
@@ -605,10 +609,12 @@ BookMetadataCache::TocEntry BookMetadataCache::getTocEntry(const int index) {
   }
 
   // Seek to TOC LUT item, read from LUT and get out data
-  bookFile.seek(lutOffset + sizeof(uint32_t) * spineCount + sizeof(uint32_t) * index);
-  uint32_t tocEntryPos;
-  serialization::readPod(bookFile, tocEntryPos);
-  bookFile.seek(tocEntryPos);
+  uint32_t tocEntryPos = 0;
+  if (!bookFile.seek(lutOffset + sizeof(uint32_t) * spineCount + sizeof(uint32_t) * index) ||
+      !serialization::tryReadPod(bookFile, tocEntryPos) || !bookFile.seek(tocEntryPos)) {
+    LOG_ERR("BMC", "getTocEntry: cannot read LUT slot %d", index);
+    return {};
+  }
   return readTocEntry(bookFile);
 }
 
