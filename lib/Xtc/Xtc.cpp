@@ -19,6 +19,19 @@ void yieldDuringThumbnail(uint8_t& rowsSinceYield) {
   rowsSinceYield = 0;
   vTaskDelay(1);
 }
+
+bool writeAll(HalFile& file, const uint8_t* data, const size_t size) { return file.write(data, size) == size; }
+
+// close() writes the last sector, so it can fail too. A partial BMP would be
+// reused on every later call, so it is removed.
+bool finishBmp(HalFile& file, const std::string& path, const bool written) {
+  const bool ok = file.close() && written;
+  if (!ok) {
+    LOG_ERR("XTC", "Failed to write %s", path.c_str());
+    Storage.remove(path.c_str());
+  }
+  return ok;
+}
 }  // namespace
 
 #include "../Memory/Memory.h"
@@ -149,7 +162,7 @@ bool Xtc::generateCoverBmp() const {
   setupCacheDir();
 
   // Get first page info for cover
-  xtc::PageInfo pageInfo;
+  xtc::PageInfo pageInfo{};
   if (!parser->getPageInfo(0, pageInfo)) {
     LOG_DBG("XTC", "Failed to get first page info");
     return false;
@@ -191,6 +204,7 @@ bool Xtc::generateCoverBmp() const {
     LOG_DBG("XTC", "Failed to create cover BMP file");
     return false;
   }
+  bool written = false;
 
   if (bitDepth == 2) {
     // XTH 2-bit mode: preserve all 4 gray levels in a 2-bit BMP so the sleep
@@ -219,7 +233,7 @@ bool Xtc::generateCoverBmp() const {
     memcpy(hdr + 18, &pageInfo.width, 2);  // biWidth (upper bytes stay 0)
     memcpy(hdr + 22, &topDownHeight, 4);   // negative biHeight = top-down
     memcpy(hdr + 34, &imageSize, 4);
-    coverBmp.write(hdr, sizeof(hdr));
+    written = writeAll(coverBmp, hdr, sizeof(hdr));
 
     const size_t colBytes = (pageInfo.height + 7) / 8;  // Bytes per column
     const size_t planeSize = static_cast<size_t>(pageInfo.width) * colBytes;
@@ -228,7 +242,7 @@ bool Xtc::generateCoverBmp() const {
 
     // XTH value -> BMP palette index (palette: 0=black, 1=dark, 2=light, 3=white)
     static constexpr uint8_t kXthToBmp[4] = {3, 1, 2, 0};
-    for (uint16_t y = 0; y < pageInfo.height; y++) {
+    for (uint16_t y = 0; written && y < pageInfo.height; y++) {
       memset(rowBuffer, 0x00, rowSize2);
 
       for (uint16_t x = 0; x < pageInfo.width; x++) {
@@ -247,31 +261,32 @@ bool Xtc::generateCoverBmp() const {
       }
 
       // Row buffer is rowSize2 bytes and zero-padded, write it whole
-      coverBmp.write(rowBuffer, rowSize2);
+      written = writeAll(coverBmp, rowBuffer, rowSize2);
     }
 
   } else {
     // Write 1-bit BMP header (top-down row order)
-    BmpHeader bmpHeader;
+    BmpHeader bmpHeader{};
     createBmpHeader(&bmpHeader, pageInfo.width, pageInfo.height, BmpRowOrder::TopDown);
-    coverBmp.write(reinterpret_cast<const uint8_t*>(&bmpHeader), sizeof(bmpHeader));
+    written = writeAll(coverBmp, reinterpret_cast<const uint8_t*>(&bmpHeader), sizeof(bmpHeader));
 
     const uint32_t rowSize = ((pageInfo.width + 31) / 32) * 4;
     // 1-bit source: write directly with proper padding
     const size_t srcRowSize = (pageInfo.width + 7) / 8;
 
-    for (uint16_t y = 0; y < pageInfo.height; y++) {
+    for (uint16_t y = 0; written && y < pageInfo.height; y++) {
       // Write source row
-      coverBmp.write(pageBuffer + y * srcRowSize, srcRowSize);
+      written = writeAll(coverBmp, pageBuffer + y * srcRowSize, srcRowSize);
 
       // Pad to 4-byte boundary
-      uint8_t padding[4] = {0, 0, 0, 0};
-      size_t paddingSize = rowSize - srcRowSize;
-      if (paddingSize > 0) {
-        coverBmp.write(padding, paddingSize);
+      const uint8_t padding[4] = {0, 0, 0, 0};
+      const size_t paddingSize = rowSize - srcRowSize;
+      if (written && paddingSize > 0) {
+        written = writeAll(coverBmp, padding, paddingSize);
       }
     }
   }
+  if (!finishBmp(coverBmp, getCoverBmpPath(), written)) return false;
   LOG_DBG("XTC", "Generated cover BMP: %s", getCoverBmpPath().c_str());
   return true;
 }
@@ -299,7 +314,7 @@ bool Xtc::generateThumbBmp(int height) const {
   setupCacheDir();
 
   // Get first page info for cover
-  xtc::PageInfo pageInfo;
+  xtc::PageInfo pageInfo{};
   if (!parser->getPageInfo(0, pageInfo)) {
     LOG_DBG("XTC", "Failed to get first page info");
     return false;
@@ -388,9 +403,9 @@ bool Xtc::generateThumbBmp(int height) const {
   }
 
   // Write 1-bit BMP header (top-down row order)
-  BmpHeader bmpHeader;
+  BmpHeader bmpHeader{};
   createBmpHeader(&bmpHeader, thumbWidth, thumbHeight, BmpRowOrder::TopDown);
-  thumbBmp.write(reinterpret_cast<const uint8_t*>(&bmpHeader), sizeof(bmpHeader));
+  bool written = writeAll(thumbBmp, reinterpret_cast<const uint8_t*>(&bmpHeader), sizeof(bmpHeader));
 
   // Fixed-point scale factor (16.16)
   uint32_t scaleInv_fp = static_cast<uint32_t>(65536.0f / scale);
@@ -403,7 +418,7 @@ bool Xtc::generateThumbBmp(int height) const {
   const size_t srcRowBytes = (bitDepth == 1) ? ((pageInfo.width + 7) / 8) : 0;
   uint8_t rowsSinceYield = 0;
 
-  for (uint16_t dstY = 0; dstY < thumbHeight; dstY++) {
+  for (uint16_t dstY = 0; written && dstY < thumbHeight; dstY++) {
     memset(rowBuffer, 0xFF, rowSize);  // Start with all white (bit 1)
 
     // Calculate source Y range with bounds checking
@@ -493,9 +508,10 @@ bool Xtc::generateThumbBmp(int height) const {
     }
 
     // Write row (already padded to 4-byte boundary by rowSize)
-    thumbBmp.write(rowBuffer, rowSize);
+    written = writeAll(thumbBmp, rowBuffer, rowSize);
     yieldDuringThumbnail(rowsSinceYield);
   }
+  if (!finishBmp(thumbBmp, getThumbBmpPath(height), written)) return false;
   LOG_DBG("XTC", "Generated thumb BMP (%dx%d): %s", thumbWidth, thumbHeight, getThumbBmpPath(height).c_str());
   return true;
 }
