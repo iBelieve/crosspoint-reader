@@ -170,7 +170,7 @@ TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<in
   }
 
   // Same invariant as deserialize(): a ruby-less line keeps rubyTexts null. Layout
-  // passes none, or one entry per word.
+  // passes none, or one entry per word; a shorter list leaves later words bare.
   const size_t rubyCount = std::min<size_t>(wordRubyTexts.size(), numWords);
   for (size_t i = 0; i < rubyCount; i++) {
     if (wordRubyTexts[i].empty()) continue;

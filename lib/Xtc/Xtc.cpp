@@ -205,7 +205,7 @@ bool Xtc::generateCoverBmp() const {
   // Create BMP file
   HalFile coverBmp;
   if (!Storage.openFileForWrite("XTC", tmpBmpPath(getCoverBmpPath()), coverBmp)) {
-    LOG_DBG("XTC", "Failed to create cover BMP file");
+    LOG_ERR("XTC", "Failed to create cover BMP file");
     return false;
   }
   bool written = false;
@@ -398,7 +398,7 @@ bool Xtc::generateThumbBmp(int height) const {
   // Create thumbnail BMP file - use 1-bit format for fast home screen rendering (no gray passes)
   HalFile thumbBmp;
   if (!Storage.openFileForWrite("XTC", tmpBmpPath(getThumbBmpPath(height)), thumbBmp)) {
-    LOG_DBG("XTC", "Failed to create thumb BMP file");
+    LOG_ERR("XTC", "Failed to create thumb BMP file");
     return false;
   }
 

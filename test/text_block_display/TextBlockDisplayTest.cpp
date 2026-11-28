@@ -278,7 +278,7 @@ TEST(TextBlockRuby, KeepsNoStorageWhenEveryAnnotationIsEmpty) {
   EXPECT_TRUE(block.rubyText(1).empty());
 }
 
-// Layout may pass fewer annotations than words; the rest have none.
+// The constructor tolerates fewer annotations than words; the rest have none.
 TEST(TextBlockRuby, ShortAnnotationListLeavesLaterWordsBare) {
   TextBlock block({"a", "b", "c"}, {0, 10, 20},
                   {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(),

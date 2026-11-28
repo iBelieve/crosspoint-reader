@@ -80,8 +80,8 @@ class TextBlock final : public Block {
   bool focusPresent = false;
   bool displayPresent = false;
   bool isValid = true;
-  // Per-word data lives here. Every allocation in this class is makeUniqueNoThrow,
-  // so OOM yields an invalid block instead of abort() (-fno-exceptions).
+  // Per-word data. The arena, ruby and word-font arrays are makeUniqueNoThrow, so
+  // OOM yields an invalid block instead of abort() (-fno-exceptions).
   std::unique_ptr<uint8_t[]> arena;
   // Typed views into the arena, bound once after the arena is filled. All
   // 16-bit bases sit at even offsets, so direct dereference is alignment-safe.
