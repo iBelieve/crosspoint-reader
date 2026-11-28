@@ -75,6 +75,14 @@ TEST(TextBlockDisplay, RejectsACorruptDisplayOffset) {
     ASSERT_TRUE(out.open(path.c_str(), "wb"));
     ASSERT_TRUE(block.serialize(out));
   }
+  {
+    // The full file must load with display forms, or size 8 would not cut the header.
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    const auto loaded = TextBlock::deserialize(in);
+    ASSERT_NE(loaded, nullptr);
+    ASSERT_NE(loaded->displayForm(0), nullptr);
+  }
   // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2); then
   // sourceRanges[2], textOff[2], xpos[2], displayOff[2].
   std::FILE* f = std::fopen(path.c_str(), "r+b");
@@ -241,6 +249,14 @@ TEST(TextBlockDisplay, RejectsATruncatedHeader) {
     HalFile out;
     ASSERT_TRUE(out.open(path.c_str(), "wb"));
     ASSERT_TRUE(block.serialize(out));
+  }
+  {
+    // The full file must load with display forms, or size 8 would not cut the header.
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    const auto loaded = TextBlock::deserialize(in);
+    ASSERT_NE(loaded, nullptr);
+    ASSERT_NE(loaded->displayForm(0), nullptr);
   }
   // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2).
   // Longest first, so each size cuts the real header rather than zero padding.
