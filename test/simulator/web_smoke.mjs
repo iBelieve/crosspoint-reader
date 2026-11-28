@@ -13,7 +13,7 @@
 // Needs the playwright package and its Chromium.
 
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
@@ -33,9 +33,17 @@ const out = resolve(values.out);
 mkdirSync(out, { recursive: true });
 
 const server = createServer((req, res) => {
-  const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const file = join(site, path.endsWith('/') ? path + 'index.html' : path);
-  if (!file.startsWith(site + sep) || !existsSync(file)) {
+  // A bad request must answer 404, not crash the test before its log is written.
+  let body;
+  let file;
+  try {
+    const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    file = join(site, path.endsWith('/') ? path + 'index.html' : path);
+    if (file.startsWith(site + sep) && existsSync(file) && statSync(file).isFile()) body = readFileSync(file);
+  } catch {
+    body = undefined;
+  }
+  if (body === undefined) {
     res.writeHead(404).end();
     return;
   }
@@ -44,7 +52,7 @@ const server = createServer((req, res) => {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'require-corp',
   });
-  res.end(readFileSync(file));
+  res.end(body);
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const url = `http://127.0.0.1:${server.address().port}/?CROSSPOINT_SIM_SCREEN_TEXT=1`;
