@@ -56,6 +56,8 @@ inline const std::string& keyOrEmpty(const std::string& s) {
   static const std::string EMPTY_KEY;
   return s.size() <= MAX_STRING_BYTES ? s : EMPTY_KEY;
 }
+// The result can refer to the argument, so a temporary would leave it dangling.
+const std::string& keyOrEmpty(std::string&&) = delete;
 
 inline void writeString(std::ostream& os, const std::string& s) {
   const uint32_t len = cappedStringLength(s);
