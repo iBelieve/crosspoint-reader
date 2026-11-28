@@ -663,11 +663,14 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   // other reader is guarded by `i < rubyTexts.size()`, so allocate lazily and only once a
   // non-empty annotation actually shows up.
   //
-  // `scratch` is reused across words: readString() resizes it to the incoming length and
+  // `scratch` is reused across words: tryReadString() resizes it to the incoming length and
   // overwrites every byte, so a moved-from value carries nothing into the next iteration.
   std::string scratch;
   for (uint16_t i = 0; i < wc; i++) {
-    serialization::readString(file, scratch);
+    if (!serialization::tryReadString(file, scratch, serialization::MAX_STRING_BYTES)) {
+      LOG_ERR("TXB", "Deserialization failed: ruby text %u", static_cast<unsigned>(i));
+      return nullptr;
+    }
     if (scratch.empty()) continue;
     if (block->rubyTexts.empty()) {
       block->rubyTexts.resize(wc);

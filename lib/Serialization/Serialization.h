@@ -1,6 +1,7 @@
 #pragma once
 #include <HalStorage.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 
@@ -35,46 +36,36 @@ bool tryReadPod(HalFile& file, T& value) {
   return file.read(reinterpret_cast<uint8_t*>(&value), sizeof(T)) == sizeof(T);
 }
 
+// writeString() stores at most MAX_STRING_BYTES, so every string it writes can
+// be read back with tryReadString(..., MAX_STRING_BYTES). The cap keeps a
+// corrupt length from asking for a huge allocation; no cached EPUB string
+// (href, anchor, id, title, ruby text) is near it.
+constexpr size_t MAX_STRING_BYTES = 4096;
+
+inline uint32_t cappedStringLength(const std::string& s) {
+  return static_cast<uint32_t>(std::min(s.size(), MAX_STRING_BYTES));
+}
+
 inline void writeString(std::ostream& os, const std::string& s) {
-  const uint32_t len = s.size();
+  const uint32_t len = cappedStringLength(s);
   writePod(os, len);
   os.write(s.data(), len);
 }
 
 inline void writeString(HalFile& file, const std::string& s) {
-  const uint32_t len = s.size();
+  const uint32_t len = cappedStringLength(s);
   writePod(file, len);
   file.write(reinterpret_cast<const uint8_t*>(s.data()), len);
 }
 
+// Writes the whole string; callers bound it themselves (see ClippingStore).
 inline bool tryWriteString(HalFile& file, const std::string& s) {
   const uint32_t len = s.size();
   return tryWritePod(file, len) && (len == 0 || file.write(reinterpret_cast<const uint8_t*>(s.data()), len) == len);
 }
 
-// readString overloads: a short read of the length prefix (truncated file)
-// yields an empty string.
-inline void readString(std::istream& is, std::string& s) {
-  uint32_t len = 0;
-  readPod(is, len);
-  if (!is) {
-    s.clear();
-    return;
-  }
-  s.resize(len);
-  is.read(&s[0], len);
-}
-
-inline void readString(HalFile& file, std::string& s) {
-  uint32_t len = 0;
-  if (!tryReadPod(file, len)) {
-    s.clear();
-    return;
-  }
-  s.resize(len);
-  file.read(&s[0], len);
-}
-
+// Fails, leaving `s` unspecified, if the length prefix or the bytes are cut off,
+// or the length exceeds maxLength or the bytes left in the file.
 inline bool tryReadString(HalFile& file, std::string& s, const size_t maxLength) {
   uint32_t len = 0;
   if (!tryReadPod(file, len)) return false;

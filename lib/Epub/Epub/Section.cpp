@@ -606,9 +606,12 @@ int Section::getTocIndexForPage(const int page) const {
     }
     if (anchorReader && anchorReader->seek(anchorStart)) {
       for (uint16_t i = 0; i < anchorCount; ++i) {
-        uint16_t anchorPage;
-        serialization::readString(*anchorReader, cachedAnchor);
-        serialization::readPod(*anchorReader, anchorPage);
+        uint16_t anchorPage = 0;
+        if (!serialization::tryReadString(*anchorReader, cachedAnchor, serialization::MAX_STRING_BYTES) ||
+            !serialization::tryReadPod(*anchorReader, anchorPage)) {
+          LOG_ERR("SCT", "Anchor map entry %u is corrupt", static_cast<unsigned>(i));
+          break;
+        }
         considerAnchor(cachedAnchor, anchorPage, true);
       }
     }
@@ -1013,9 +1016,11 @@ std::optional<uint16_t> Section::getPageForAnchor(const std::string& anchor) con
   if (!openAnchorMap(f, count)) return std::nullopt;
   for (uint16_t i = 0; i < count; i++) {
     std::string key;
-    uint16_t page;
-    serialization::readString(f, key);
-    serialization::readPod(f, page);
+    uint16_t page = 0;
+    if (!serialization::tryReadString(f, key, serialization::MAX_STRING_BYTES) || !serialization::tryReadPod(f, page)) {
+      LOG_ERR("SCT", "Anchor map entry %u is corrupt", static_cast<unsigned>(i));
+      return std::nullopt;
+    }
     if (key == anchor) {
       return page;
     }

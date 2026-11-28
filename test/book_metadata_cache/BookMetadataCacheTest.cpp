@@ -1,6 +1,7 @@
 #include <HalStorage.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -17,6 +18,7 @@
 namespace heap {
 bool counting = false;
 size_t live = 0;
+size_t largest = 0;  // largest single allocation while counting
 
 struct alignas(std::max_align_t) Header {
   size_t size;
@@ -28,7 +30,10 @@ void* allocate(const size_t size) {
   if (!header) return nullptr;
   header->size = size;
   header->counted = counting;
-  if (counting) live += size;
+  if (counting) {
+    live += size;
+    largest = std::max(largest, size);
+  }
   return header + 1;
 }
 
@@ -150,4 +155,66 @@ TEST(BookMetadataCacheSizes, SpineIndexForSizeMatchesLinearScan) {
       EXPECT_LE(Storage.readOpens - opens, 1) << spineCount << " items, size " << size;
     }
   }
+}
+
+// A complete but corrupt string length fails that entry instead of sizing an allocation from it.
+TEST(BookMetadataCacheStrings, CorruptTocTitleLengthFailsOnlyThatEntry) {
+  const ScopedTempDir tempDir;
+  const auto cacheDir = tempDir.path().string();
+  buildBook(cacheDir, 600);
+  const auto path = tempDir.path() / "book.bin";
+  std::string bytes;
+  {
+    std::ifstream in(path, std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+  }
+  const size_t title = bytes.find("Chapter 150");
+  ASSERT_NE(title, std::string::npos);
+  const uint32_t corruptLength = serialization::MAX_STRING_BYTES * 2;
+  ASSERT_GT(bytes.size() - title, corruptLength) << "the bytes must be present for the test to mean anything";
+  bytes.replace(title - sizeof(uint32_t), sizeof(uint32_t), reinterpret_cast<const char*>(&corruptLength),
+                sizeof(uint32_t));
+  std::ofstream(path, std::ios::binary | std::ios::trunc) << bytes;
+
+  BookMetadataCache cache(cacheDir);
+  ASSERT_TRUE(cache.load());
+  heap::largest = 0;
+  heap::counting = true;
+  const auto corrupt = cache.getTocEntry(150);
+  heap::counting = false;
+  EXPECT_LE(heap::largest, serialization::MAX_STRING_BYTES + 1);
+  EXPECT_TRUE(corrupt.title.empty());
+  EXPECT_EQ(corrupt.spineIndex, -1);
+  const auto next = cache.getTocEntry(151);
+  EXPECT_EQ(next.title, "Chapter 151");
+  EXPECT_EQ(next.spineIndex, 151);
+}
+
+// Over-long strings are cut to what the reader accepts, and the LUT offsets still line up.
+TEST(BookMetadataCacheStrings, OverLongStringsAreCutAndTheRestStillLoads) {
+  const ScopedTempDir tempDir;
+  const auto cacheDir = tempDir.path().string();
+  zipEntrySizes.clear();
+  const std::string longTitle(serialization::MAX_STRING_BYTES + 100, 't');
+  {
+    BookMetadataCache cache(cacheDir);
+    ASSERT_TRUE(cache.beginWrite() && cache.beginContentOpfPass());
+    for (int i = 0; i < 3; i++) cache.createSpineEntry(chapterHref(i));
+    ASSERT_TRUE(cache.endContentOpfPass() && cache.beginTocPass());
+    cache.createTocEntry(longTitle, chapterHref(0), "", 1);
+    cache.createTocEntry("Chapter 1", chapterHref(1), "", 1);
+    ASSERT_TRUE(cache.endTocPass() && cache.endWrite());
+    BookMetadataCache::BookMetadata metadata;
+    metadata.title = longTitle;
+    metadata.author = "Author";
+    ASSERT_TRUE(cache.buildBookBin("book.epub", metadata));
+    ASSERT_TRUE(cache.cleanupTmpFiles());
+  }
+  BookMetadataCache cache(cacheDir);
+  ASSERT_TRUE(cache.load());
+  EXPECT_EQ(cache.coreMetadata.title, longTitle.substr(0, serialization::MAX_STRING_BYTES));
+  EXPECT_EQ(cache.coreMetadata.author, "Author");
+  EXPECT_EQ(cache.getTocEntry(0).title, longTitle.substr(0, serialization::MAX_STRING_BYTES));
+  EXPECT_EQ(cache.getTocEntry(1).title, "Chapter 1");
+  EXPECT_EQ(cache.getSpineEntry(2).href, chapterHref(2));
 }

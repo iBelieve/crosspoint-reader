@@ -1,6 +1,7 @@
 #pragma once
 #include <HalStorage.h>
 #include <Memory.h>
+#include <Serialization.h>
 
 #include <algorithm>
 #include <cstring>
@@ -143,23 +144,24 @@ void readPod(BufferedFileReader& in, T& value) {
   in.read(&value, sizeof(T));
 }
 
+template <typename T>
+bool tryReadPod(BufferedFileReader& in, T& value) {
+  return in.read(&value, sizeof(T)) == sizeof(T);
+}
+
 inline void writeString(BufferedFileWriter& out, const std::string& s) {
-  const uint32_t len = s.size();
+  const uint32_t len = cappedStringLength(s);
   writePod(out, len);
   out.write(s.data(), len);
 }
 
-// A short read of the length prefix yields an empty string, as in Serialization.h.
-inline void readString(BufferedFileReader& in, std::string& s) {
+// As the HalFile overload in Serialization.h, without the bytes-left check: the
+// allocation is still bounded by maxLength.
+inline bool tryReadString(BufferedFileReader& in, std::string& s, const size_t maxLength) {
   uint32_t len = 0;
-  if (in.read(&len, sizeof(len)) != sizeof(len)) {
-    s.clear();
-    return;
-  }
+  if (in.read(&len, sizeof(len)) != sizeof(len) || len > maxLength) return false;
   s.resize(len);
-  if (len > 0) {
-    in.read(&s[0], len);
-  }
+  return len == 0 || in.read(&s[0], len) == len;
 }
 
 }  // namespace serialization
