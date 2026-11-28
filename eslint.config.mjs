@@ -3,9 +3,10 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
+  // Lint only these paths, so gitignored trees (.venv, fs_, .pio) are skipped.
   // The device web UI (src/network/html) is built into the firmware and is not
   // linted yet.
-  {ignores: ['node_modules/', 'build/', '.pio/', 'freeink-sdk/', 'src/']},
+  {ignores: ['**/*', '!.github/', '!.github/scripts/', '!.github/scripts/**', '!test/', '!test/**', '!eslint.config.mjs']},
   js.configs.recommended,
   {
     files: ['**/*.js', '**/*.cjs'],

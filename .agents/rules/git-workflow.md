@@ -64,20 +64,23 @@ commit; a pure refactor preserves behavior and goes in its own commit.
 
 ### Syncing With Upstream
 
-Upstream merges into `develop` are their own PR, with no other changes. Paths
-below are from the repository root.
+Upstream merges into `develop` are their own PR, with no other changes, except
+one commit that runs `ruff format` and `ruff check --fix` on upstream Python so
+the required lint jobs pass. Paths below are from the repository root.
 
 - **Fork-owned; keep the fork's version:** `SCOPE.md`,
   `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/`,
   `.agents/rules/git-workflow.md`, `.agents/skills/firmware-handoff/`, and
-  `.agents/skills/scope-discipline/`. Read upstream's change for technical
+  `.agents/skills/scope-discipline/`, `ruff.toml`, `eslint.config.mjs`,
+  `package.json`, and `package-lock.json`. Read upstream's change for technical
   facts worth porting, but do not take its policy.
 - **Fork sections in shared files:** in `AGENTS.md`, keep the fork's "This
   fork", "How agents work here", "Verification is not optional", and "Firmware
   handoff" sections, the routing-table row for "New features, apps, ...", and
   the "Start here" wording ("tie it to the requirement", verifying for the
   owner). Upstream's "Human ownership" and "Mandatory firmware handoff"
-  sections stay deleted. The same applies to the fork edits in
+  sections stay deleted. In `.github/workflows/ci.yml`, keep the `ruff` and
+  `eslint` jobs and their entries under the Test Status job's `needs:`. The same applies to the fork edits in
   `.agents/README.md`, `.agents/rules/testing-debugging.md`,
   `.agents/rules/ui-activities.md`, `README.md` (scope links), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take

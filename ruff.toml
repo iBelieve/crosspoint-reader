@@ -1,9 +1,9 @@
 # Lint and format settings for the repository's Python scripts and tests.
 # CI runs `ruff check` and `ruff format --check` on the paths in `include`.
 line-length = 120
-# PlatformIO build scripts run in PlatformIO's own Python, which may be older
-# than the CI interpreter.
-target-version = "py39"
+# PlatformIO build scripts run in PlatformIO's own Python; README.md documents
+# 3.8 as the minimum.
+target-version = "py38"
 include = ["scripts/**/*.py", "test/**/*.py", ".github/scripts/**/*.py"]
 # Not covered yet: lib/EpdFont/scripts (font tooling whose output is checked in).
 extend-exclude = ["scripts/vendor"]
@@ -32,4 +32,4 @@ ignore = [
 
 [lint.per-file-ignores]
 # SCons injects Import and env into PlatformIO extra_scripts.
-"scripts/{app_only_upload,gen_i18n,patch_*,register_unit_tests_target}.py" = ["F821"]
+"scripts/{app_only_upload,patch_*,register_unit_tests_target}.py" = ["F821"]
