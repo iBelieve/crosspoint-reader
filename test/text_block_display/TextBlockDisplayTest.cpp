@@ -243,7 +243,8 @@ TEST(TextBlockDisplay, RejectsATruncatedHeader) {
     ASSERT_TRUE(block.serialize(out));
   }
   // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2).
-  for (const auto size : {0, 1, 2, 4, 6, 8}) {
+  // Longest first, so each size cuts the real header rather than zero padding.
+  for (const auto size : {8, 6, 4, 2, 1, 0}) {
     std::filesystem::resize_file(path, size);
     HalFile in;
     ASSERT_TRUE(in.open(path.c_str(), "rb"));
