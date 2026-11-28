@@ -1,0 +1,16 @@
+// Browser simulator previews: a Worker that only serves the site that
+// test/simulator/web_site.py assembles in sim-site/. The web-preview workflow
+// runs `wrangler preview --name pr-<n>` for pull requests and `wrangler deploy`
+// for develop.
+{
+  // Also WORKER_NAME in .github/workflows/web-preview.yml.
+  "name": "crosspoint-sim",
+  "compatibility_date": "2026-11-13",
+  "assets": {
+    "directory": "../../sim-site"
+  },
+  "workers_dev": true,
+  "preview_urls": true,
+  // No Preview-specific settings; the block opts in to Worker Previews.
+  "previews": {}
+}

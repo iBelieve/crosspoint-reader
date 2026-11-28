@@ -5,8 +5,9 @@
     python3 test/simulator/web_site.py .pio/build/simulator_web sim-site --label "PR #12 · abc1234"
 
 The site holds the page, the wasm build, a sample book copied onto fresh SD
-cards (files.json), the COOP/COEP headers threads need on Cloudflare Pages
-(_headers), and build.json with the label shown in the page header.
+cards (files.json), the COOP/COEP headers threads need (_headers, read by
+Cloudflare Workers static assets), and build.json with the label shown in the
+page header.
 """
 
 import argparse
