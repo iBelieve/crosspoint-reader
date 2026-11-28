@@ -9,11 +9,12 @@ on:
     # label starts none, and re-runs reuse the original labels.
     types: [opened, synchronize, reopened, labeled]
 
-# A new push to a PR cancels its run in progress. Other events and re-runs
-# queue behind it instead, since cancelling fails Test Status on that SHA. A
-# newer queued run replaces an older queued one.
+# A new push to a PR cancels its run in progress. Other events queue behind
+# it instead, since cancelling fails Test Status on that SHA; a newer queued
+# run replaces an older queued one. Re-runs get their own group so a re-run of
+# an old commit cannot replace the current head's queued run.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
+  group: ci-${{ github.event.pull_request.number || github.sha }}${{ github.run_attempt > 1 && format('-rerun-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event.action == 'synchronize' && github.run_attempt == 1 }}
 
 permissions:

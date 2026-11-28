@@ -75,11 +75,6 @@ module.exports = async ({github, context, core}) => {
   // x4c builds on every run. Without the job list, add boards that uploaded anything.
   const builds = allBuilds.filter(build => build.env === 'x4c' || (built ? built.has(`Build ${build.env}`)
     : artifacts.has(build.name) || artifacts.has(`firmware-stats-${build.env}`)));
-  // A queued run cancelled before it started has nothing to show.
-  if (run.conclusion === 'cancelled' && !artifacts.size) {
-    core.notice(`Skipping cancelled run ${run.id} with no artifacts.`);
-    return;
-  }
   const missingBuilds = builds.filter((build) => !artifacts.has(build.name));
   const shortSha = run.head_sha.slice(0, 7);
   let body = `${marker}\n### Firmware builds\n\n`;
@@ -110,19 +105,16 @@ module.exports = async ({github, context, core}) => {
   );
 
   // A delayed completion or rerun must not replace a newer finished run for this
-  // head, and a cancelled run must not replace any finished run for it. A newer
-  // run still in progress overwrites this comment when it finishes.
+  // head. A newer run still running, or cancelled, does not count: one that
+  // finishes later overwrites this comment.
   const latestRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
     owner, repo, workflow_id: run.workflow_id, event: 'pull_request',
     head_sha: run.head_sha, per_page: 100,
   });
-  const supersedes = candidate => {
-    if (candidate.head_repository?.id !== run.head_repository.id || candidate.head_branch !== run.head_branch ||
-        candidate.status !== 'completed' || candidate.conclusion === 'cancelled') return false;
-    const newer = candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt);
-    const self = candidate.id === run.id && candidate.run_attempt === run.run_attempt;
-    return newer || (run.conclusion === 'cancelled' && !self);
-  };
+  const supersedes = candidate => candidate.head_repository?.id === run.head_repository.id &&
+    candidate.head_branch === run.head_branch &&
+    candidate.status === 'completed' && candidate.conclusion !== 'cancelled' &&
+    (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt));
   if (latestRuns.some(supersedes)) {
     core.notice('Skipping superseded run or attempt.');
     return;

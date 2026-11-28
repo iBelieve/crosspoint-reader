@@ -190,22 +190,11 @@ test('a board missing from the develop build is not reported as a failed build',
   assert.match(await comparison(f), /X4 Classic: baseline unavailable — measurement missing/);
 });
 
-test('cancelled runs neither publish nor supersede a finished run', async () => {
-  const cancelled = fixture(); cancelled.run.conclusion = 'cancelled'; cancelled.records[20] = [];
-  await publish(cancelled); assert.equal(cancelled.posted.length, 0);
-  const partial = fixture(); partial.run.conclusion = 'cancelled';
-  await publish(partial); assert.equal(partial.posted.length, 1);
-  assert.match(partial.posted[0].body, /CI finished with cancelled/);
-  const older = fixture(); older.run.conclusion = 'cancelled'; const paginateO = older.github.paginate;
-  older.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
-    ? [{...older.run}, {...older.run, id: 19, conclusion: 'success'}] : paginateO(method, args);
-  await publish(older); assert.equal(older.posted.length, 0);
-  const f = fixture(); const paginate = f.github.paginate;
-  f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
-    ? [{...f.run, id: 21, conclusion: 'cancelled'}] : paginate(method, args);
-  await publish(f); assert.equal(f.posted.length, 1);
-  const g = fixture(); const paginateG = g.github.paginate;
-  g.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
-    ? [{...g.run, id: 21, status: 'in_progress', conclusion: null}] : paginateG(method, args);
-  await publish(g); assert.equal(g.posted.length, 1);
+test('cancelled or unfinished newer runs do not supersede a finished run', async () => {
+  for (const newer of [{status: 'completed', conclusion: 'cancelled'}, {status: 'in_progress', conclusion: null}]) {
+    const f = fixture(); const paginate = f.github.paginate;
+    f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+      ? [{...f.run, id: 21, ...newer}] : paginate(method, args);
+    await publish(f); assert.equal(f.posted.length, 1);
+  }
 });
