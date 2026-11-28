@@ -5,9 +5,8 @@ line-length = 120
 # than the CI interpreter.
 target-version = "py39"
 include = ["scripts/**/*.py", "test/**/*.py", ".github/scripts/**/*.py"]
+# Not covered yet: lib/EpdFont/scripts (font tooling whose output is checked in).
 extend-exclude = ["scripts/vendor"]
-# SCons injects these into PlatformIO extra_scripts.
-builtins = ["Import", "env"]
 
 [lint]
 select = [
@@ -30,3 +29,7 @@ ignore = [
   # literals in the EPUB generators and fixtures.
   "E501",
 ]
+
+[lint.per-file-ignores]
+# SCons injects Import and env into PlatformIO extra_scripts.
+"scripts/{app_only_upload,gen_i18n,patch_*,register_unit_tests_target}.py" = ["F821"]

@@ -41,7 +41,8 @@ class SourceReferenceTest(unittest.TestCase):
             self.assertEqual(release_license.source_reference(path), source_url)
 
     def test_missing_metadata_does_not_silently_omit_source(self):
-        with tempfile.TemporaryDirectory() as temporary, self.assertRaisesRegex(ValueError, "Missing source"):
+        missing_metadata = self.assertRaisesRegex(ValueError, "Missing source package metadata")
+        with tempfile.TemporaryDirectory() as temporary, missing_metadata:
             release_license.source_reference(Path(temporary))
 
     def test_sdk_mismatch_does_not_label_unrelated_sources_as_corresponding(self):

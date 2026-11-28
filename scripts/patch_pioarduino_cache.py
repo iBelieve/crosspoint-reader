@@ -51,9 +51,9 @@ new_check = """flag_any_custom_sdkconfig = (
     and exists(str(Path(FRAMEWORK_LIB_DIR) / chip_variant / "sdkconfig.orig"))
 )"""
 
-# pioarduino 55.03.39 removed trailing whitespace from the same expression.
+# Releases before pioarduino 55.03.39 had trailing whitespace after "and".
 if old_check not in source:
-    old_check = old_check.replace("and \n", "and\n")
+    old_check = old_check.replace("and\n", "and \n")
 
 if old_check in source:
     builder.write_text(source.replace(old_check, new_check, 1), encoding="utf-8")
