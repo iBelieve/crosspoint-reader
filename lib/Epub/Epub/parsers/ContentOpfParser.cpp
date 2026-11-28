@@ -336,7 +336,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
 
     // Record index entry for fast lookup later
     if (self->tempItemStore && storable) {
-      ItemIndexEntry entry;
+      ItemIndexEntry entry{};
       entry.idHash = fnvHash(itemId);
       entry.idLen = static_cast<uint16_t>(itemId.size());
       entry.fileOffset = static_cast<uint32_t>(self->tempItemStore.position());

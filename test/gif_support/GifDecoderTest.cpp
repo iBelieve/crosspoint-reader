@@ -84,7 +84,7 @@ void countRow(GIFDRAW* row) {
 TEST_F(GifDecoderTest, DecodesSmallFourColorAndMaximumWidthImages) {
   for (const char* fixture : {SMALL_GIF, WIDE_GIF}) {
     auto bytes = fromHex(fixture);
-    AnimatedGIF decoder;
+    AnimatedGIF decoder{};
     decoder.begin(GIF_PALETTE_RGB888);
     ASSERT_TRUE(decoder.open(bytes.data(), bytes.size(), countRow));
     DrawCount count;
@@ -104,7 +104,7 @@ TEST_F(GifDecoderTest, DecodesLargeGlobalPalettesFromMemoryAndFiles) {
     GifBasicInfo info;
     ASSERT_TRUE(inspect(bytes, info));
     for (const bool fromFile : {false, true}) {
-      AnimatedGIF decoder;
+      AnimatedGIF decoder{};
       decoder.begin(GIF_PALETTE_RGB888);
       ASSERT_TRUE(fromFile ? decoder.open(path.c_str(), countRow) : decoder.open(bytes.data(), bytes.size(), countRow));
       DrawCount count;

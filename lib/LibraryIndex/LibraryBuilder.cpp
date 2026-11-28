@@ -466,7 +466,10 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
 struct DedupFrame {
   WalkState& state;
   uint16_t base;
+  DedupFrame(WalkState& state, const uint16_t base) : state(state), base(base) {}
   ~DedupFrame() { state.activeDedupCount = base; }
+  DedupFrame(const DedupFrame&) = delete;
+  DedupFrame& operator=(const DedupFrame&) = delete;
 };
 
 void walk(WalkState& st, HalFile& dir, const std::string& path, const int depth) {

@@ -21,12 +21,12 @@ the commit; never revert it. Self-review against the four review checklists belo
 ## 2. Run every check
 
 Run the [verification list](../../../AGENTS.md#verification-is-not-optional):
-format, host tests, `pio check -e x4c`, firmware builds for affected boards, and any
+format, host tests, `pio check -e x4c`, `bin/clang-tidy-check`, firmware builds for affected boards, and any
 other job in `.github/workflows/ci.yml`. Follow the
 [testing rule](../../rules/testing-debugging.md) for build logs.
 
 - New or changed logic has host tests, and they pass.
-- The change adds no compiler warnings, cppcheck findings, or lint findings.
+- The change adds no compiler warnings, cppcheck or clang-tidy findings, or lint findings.
 - Record each command and its outcome. A check that could not run is reported
   with its reason; it is not a pass.
 

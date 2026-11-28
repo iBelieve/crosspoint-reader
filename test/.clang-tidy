@@ -1,0 +1,12 @@
+# Tests keep the parent checks except these:
+# - clang-analyzer-*: takes minutes on large test files, finds little in assertions.
+# - unchecked-optional-access: does not see gtest's ASSERT_TRUE(x.has_value()).
+# - atoi, .cpp includes, and allocation-efficiency checks: fine in test code.
+InheritParentConfig: true
+Checks: >
+  -clang-analyzer-*,
+  -bugprone-suspicious-include,
+  -bugprone-unchecked-optional-access,
+  -cert-err34-c,
+  -performance-inefficient-string-concatenation,
+  -performance-inefficient-vector-operation

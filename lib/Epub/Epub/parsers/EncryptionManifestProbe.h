@@ -8,7 +8,10 @@
 // Stream only the algorithm attributes; resource names stay in the ZIP.
 class EncryptionManifestProbe : public Print {
  public:
+  EncryptionManifestProbe() = default;
   ~EncryptionManifestProbe() override { destroyXmlParser(parser); }
+  EncryptionManifestProbe(const EncryptionManifestProbe&) = delete;
+  EncryptionManifestProbe& operator=(const EncryptionManifestProbe&) = delete;
 
   bool setup() {
     parser = XML_ParserCreate(nullptr);

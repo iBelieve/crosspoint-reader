@@ -68,6 +68,8 @@ class Bitmap {
   explicit Bitmap(HalFile& file, bool dithering = false, bool originalThresholds = false)
       : file(file), dithering(dithering), originalThresholds(originalThresholds) {}
   ~Bitmap();
+  Bitmap(const Bitmap&) = delete;
+  Bitmap& operator=(const Bitmap&) = delete;
   BmpReaderError parseHeaders();
   BmpReaderError readNextRow(uint8_t* data, uint8_t* rowBuffer) const;
   BmpReaderError rewindToData() const;

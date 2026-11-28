@@ -328,7 +328,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int sectionFontId, con
   }
 
   struct DecorationLineTracker {
-    EpdFontFamily::Style style;
+    EpdFontFamily::Style style{};
     int startX = -1;
     int endX = -1;
     int yPos = 0;
@@ -566,18 +566,20 @@ bool TextBlock::serialize(HalFile& file) const {
 }
 
 std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
-  uint16_t wc;
-  uint8_t flags;
-  uint16_t textBytes;
-  uint16_t paragraphStartWord;
+  uint16_t wc = 0;
+  uint8_t flags = 0;
+  uint16_t textBytes = 0;
+  uint16_t paragraphStartWord = 0;
   uint16_t displayBytes = 0;
-  serialization::readPod(file, wc);
-  serialization::readPod(file, flags);
-  serialization::readPod(file, textBytes);
-  serialization::readPod(file, paragraphStartWord);
+  if (!serialization::tryReadPod(file, wc) || !serialization::tryReadPod(file, flags) ||
+      !serialization::tryReadPod(file, textBytes) || !serialization::tryReadPod(file, paragraphStartWord)) {
+    LOG_ERR("TXB", "Deserialization failed: truncated header");
+    return nullptr;
+  }
   const bool hasDisplay = (flags & FLAG_DISPLAY) != 0;
-  if (hasDisplay) {
-    serialization::readPod(file, displayBytes);
+  if (hasDisplay && !serialization::tryReadPod(file, displayBytes)) {
+    LOG_ERR("TXB", "Deserialization failed: truncated header");
+    return nullptr;
   }
   if ((flags & ~(FLAG_FOCUS | FLAG_DISPLAY)) != 0 || (hasDisplay && wc == 0)) {
     LOG_ERR("TXB", "Deserialization failed: bad flags 0x%02X", flags);
@@ -663,8 +665,8 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   // other reader is guarded by `i < rubyTexts.size()`, so allocate lazily and only once a
   // non-empty annotation actually shows up.
   //
-  // `scratch` is reused across words: tryReadString() resizes it to the incoming length and
-  // overwrites every byte, so a moved-from value carries nothing into the next iteration.
+  // `scratch` is reused across words; swapping hands its buffer to the block and takes back
+  // the empty string that was there.
   std::string scratch;
   for (uint16_t i = 0; i < wc; i++) {
     if (!serialization::tryReadString(file, scratch, serialization::MAX_STRING_BYTES)) {
@@ -675,7 +677,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
     if (block->rubyTexts.empty()) {
       block->rubyTexts.resize(wc);
     }
-    block->rubyTexts[i] = std::move(scratch);
+    block->rubyTexts[i].swap(scratch);
   }
 
   // Style (alignment + margins/padding/indent)

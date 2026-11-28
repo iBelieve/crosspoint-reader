@@ -250,8 +250,8 @@ TEST(EpdFont, KernLookupSparseMatchesDense) {
   EpdFont sparse(&sparseData);
 
   // Every pair the dense font answers, the sparse font must answer identically.
-  for (const uint32_t left : {'T', 'a', 'o', 'x'}) {
-    for (const uint32_t right : {'T', 'a', 'o', 'x'}) {
+  for (const uint32_t left : {U'T', U'a', U'o', U'x'}) {
+    for (const uint32_t right : {U'T', U'a', U'o', U'x'}) {
       EXPECT_EQ(sparse.getKerning(left, right), testFont().getKerning(left, right))
           << "pair " << static_cast<char>(left) << static_cast<char>(right);
     }
@@ -294,8 +294,8 @@ EpdFontData makeSplitClassFontData() {
 TEST(EpdFont, KernSplitClassMapMatchesPacked) {
   const EpdFontData splitData = makeSplitClassFontData();
   EpdFont split(&splitData);
-  for (const uint32_t left : {'T', 'a', 'o', 'x', 'z'}) {
-    for (const uint32_t right : {'T', 'a', 'o', 'x', 'z'}) {
+  for (const uint32_t left : {U'T', U'a', U'o', U'x', U'z'}) {
+    for (const uint32_t right : {U'T', U'a', U'o', U'x', U'z'}) {
       EXPECT_EQ(split.getKerning(left, right), testFont().getKerning(left, right))
           << "pair " << static_cast<char>(left) << static_cast<char>(right);
     }

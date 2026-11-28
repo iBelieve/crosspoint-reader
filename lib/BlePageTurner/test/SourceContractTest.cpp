@@ -36,10 +36,10 @@ TEST(BlePageTurnerSourceContractTest, IncludesStayInsideTheAllowList) {
         if (!std::regex_search(line, m, include)) continue;
         const std::string name = m[1];
         const std::string file = entry.path().filename().string();
-        if (kOwn.count(name) || kStd.count(name)) continue;
+        if (kOwn.contains(name) || kStd.contains(name)) continue;
         if (name == "BleRemoteProfiles.h" && file == "BleKeyBinding.h") continue;
         if (name == "ArduinoJson.h" && file == "BlePageTurnerJson.h") continue;
-        if (kSdkRadioOnly.count(name) && file == "SdkRadio.cpp") continue;
+        if (kSdkRadioOnly.contains(name) && file == "SdkRadio.cpp") continue;
         outside += file + ": " + name + "\n";
       }
     }

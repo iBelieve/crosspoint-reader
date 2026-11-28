@@ -84,7 +84,7 @@ inline void add(const std::string& path, const std::string& bytes = "book", cons
   files[path] = node;
   std::string parent = path.substr(0, path.find_last_of('/'));
   if (parent.empty()) parent = "/";
-  if (!files.count(parent)) {
+  if (!files.contains(parent)) {
     add(parent, "");
     files[parent]->directory = true;
   }
@@ -205,7 +205,7 @@ class HalStorage {
     return storage;
   }
 
-  bool exists(const char* path) const { return fake::files.count(path) != 0; }
+  bool exists(const char* path) const { return fake::files.contains(path); }
   bool mkdir(const char* path) {
     if (!exists(path)) fake::add(path, "");
     fake::files[path]->directory = true;

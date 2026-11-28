@@ -33,7 +33,8 @@ namespace {
 void installBuiltinVariants(GfxRenderer& renderer) {
   renderer.setFontVariantProvider({&renderer, [](void* ctx, const int fontId, const float scale) {
                                      const int variant = builtinReaderFontVariant(fontId, scale);
-                                     return static_cast<GfxRenderer*>(ctx)->getFontMap().count(variant) ? variant : 0;
+                                     return static_cast<GfxRenderer*>(ctx)->getFontMap().contains(variant) ? variant
+                                                                                                           : 0;
                                    }});
 }
 

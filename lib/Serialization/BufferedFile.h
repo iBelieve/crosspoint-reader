@@ -78,6 +78,7 @@ class BufferedFileReader {
       : file(file), buf(makeUniqueNoThrow<uint8_t[]>(capacity)), cap(buf ? capacity : 0), bufStart(file.position()) {}
   BufferedFileReader(const BufferedFileReader&) = delete;
   BufferedFileReader& operator=(const BufferedFileReader&) = delete;
+  ~BufferedFileReader() = default;
 
   size_t read(void* dst, size_t len) {
     auto* p = static_cast<uint8_t*>(dst);

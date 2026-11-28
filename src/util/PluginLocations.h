@@ -52,7 +52,10 @@ constexpr PickerAction pickerAction(const DeviceKind kind, const bool hasReadme)
 inline bool parseVersion(const std::string& v, uint32_t (&out)[3]) {
   size_t pos = 0;
   for (int k = 0; k < 3; k++) {
-    if (k > 0 && (pos >= v.size() || v[pos++] != '.')) return false;
+    if (k > 0) {
+      if (pos >= v.size() || v[pos] != '.') return false;
+      pos++;
+    }
     if (pos >= v.size() || v[pos] < '0' || v[pos] > '9') return false;
     uint64_t n = 0;
     for (; pos < v.size() && v[pos] >= '0' && v[pos] <= '9'; pos++) {

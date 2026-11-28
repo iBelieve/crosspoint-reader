@@ -26,6 +26,8 @@ class Table {
   const uint8_t* data() const { return data_; }
 
   bool has(const uint32_t offset, const uint32_t count) const { return offset <= length_ && count <= length_ - offset; }
+  // The analyzer misses that has() fails whenever data_ is null (length_ is 0 then).
+  // NOLINTBEGIN(clang-analyzer-core.NullDereference)
   uint8_t u8(const uint32_t offset) const { return has(offset, 1) ? data_[offset] : 0; }
   uint16_t u16(const uint32_t offset) const {
     return has(offset, 2) ? static_cast<uint16_t>((data_[offset] << 8) | data_[offset + 1]) : 0;
@@ -41,6 +43,7 @@ class Table {
                      (static_cast<uint32_t>(data_[offset + 2]) << 8) | data_[offset + 3]
                : 0;
   }
+  // NOLINTEND(clang-analyzer-core.NullDereference)
 
   // The u16 count stored at `field`, clamped to the `recordSize`-byte records
   // that fit from offset `first` on.

@@ -15,8 +15,8 @@ struct SdCardFontFileInfo {
   // for the canonical name, so downloaded families keep no per-file heap strings
   // and the entry is two pointers wide (8 bytes on the ESP32-C3).
   std::unique_ptr<char[]> name;
-  uint8_t pointSize;      // parsed from filename: 14 (0 for size-free vector fonts)
-  uint8_t style;          // .cpfont: always 0 (all 4 styles bundled in one file).
+  uint8_t pointSize = 0;  // parsed from filename: 14 (0 for size-free vector fonts)
+  uint8_t style = 0;      // .cpfont: always 0 (all 4 styles bundled in one file).
                           // Vector family: resolved role (0=regular, 1=bold,
                           // 2=italic, 3=bold-italic). A loose file is always role 0.
   uint16_t weight = 400;  // Vector metadata weight (unused for .cpfont).

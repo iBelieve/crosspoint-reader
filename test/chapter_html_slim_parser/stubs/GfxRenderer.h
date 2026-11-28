@@ -100,9 +100,9 @@ class GfxRenderer {
   void setFontVariantProvider(const FontVariantProvider& provider) { fontVariantProvider_ = provider; }
   int resolveFontVariant(int fontId, float scale) const { return fontVariantProvider_.resolveFont(fontId, scale); }
   bool ensureFontLoaded(int fontId) const {
-    if (fontMap.count(fontId) != 0 || fontId == 0) return true;
+    if (fontMap.contains(fontId) || fontId == 0) return true;
     return fontVariantProvider_.load && fontVariantProvider_.load(fontVariantProvider_.ctx, fontId) &&
-           fontMap.count(fontId) != 0;
+           fontMap.contains(fontId);
   }
   // Fixture embedded fonts: family i resolves to 900000 + i * 1000 + scale * 100.
   std::vector<uint32_t> embeddedFamilies;
@@ -130,7 +130,7 @@ class GfxRenderer {
     while (const uint32_t cp = utf8NextCodepoint(reinterpret_cast<const uint8_t**>(&text))) {
       if (utf8IsCombiningMark(cp)) continue;
       const uint32_t measured = (style & EpdFontFamily::SMALL_CAPS) ? utf8SmallCapsUpper(cp) : cp;
-      if (sdFont && !preparedAdvances.count({fontId, static_cast<uint8_t>(style) & 3, measured})) ++coldMeasurements;
+      if (sdFont && !preparedAdvances.contains({fontId, static_cast<uint8_t>(style) & 3, measured})) ++coldMeasurements;
       width += ((style & EpdFontFamily::BOLD) ? boldGlyphAdvance : 8) + trackingBetween(previous, cp, tracking);
       previous = cp;
     }
@@ -178,7 +178,7 @@ class GfxRenderer {
     explicit ShapingMemoScope(bool enabled = true) {
       if (enabled) ++shapingMemoStarts;
     }
-    ~ShapingMemoScope() {}
+    ~ShapingMemoScope() = default;
   };
 
  private:

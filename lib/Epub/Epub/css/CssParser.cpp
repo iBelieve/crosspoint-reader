@@ -291,9 +291,9 @@ bool interpretForcedBreak(const std::string_view value) {
 // CSS pixels for a border width token (thin/medium/thick or a length); false if not a width.
 bool interpretBorderWidth(const std::string_view token, uint8_t& out) {
   static constexpr std::string_view KEYWORDS[] = {"thin", "medium", "thick"};
-  for (uint8_t i = 0; i < std::size(KEYWORDS); ++i) {
+  for (size_t i = 0; i < std::size(KEYWORDS); ++i) {
     if (iequalsAscii(token, KEYWORDS[i])) {
-      out = i + 1;
+      out = static_cast<uint8_t>(i + 1);
       return true;
     }
   }

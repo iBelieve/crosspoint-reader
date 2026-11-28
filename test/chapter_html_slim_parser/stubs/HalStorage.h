@@ -28,7 +28,11 @@ class HalFile {
   }
   int available() const { return file_ ? static_cast<int>(size() - position()) : 0; }
   int read() { return file_ ? std::fgetc(file_) : -1; }
-  int read(void* buffer, size_t count) { return file_ ? static_cast<int>(std::fread(buffer, 1, count, file_)) : 0; }
+  int read(void* buffer, size_t count) {
+    // fread does nothing at end of file or after an error; say so explicitly.
+    if (!file_ || std::feof(file_) || std::ferror(file_)) return 0;
+    return static_cast<int>(std::fread(buffer, 1, count, file_));
+  }
   size_t write(const void* buffer, size_t count) {
     if (HalFileTest::failNextWrite) {
       HalFileTest::failNextWrite = false;
@@ -96,7 +100,7 @@ class HalStorage {
     std::fclose(file);
     return true;
   }
-  bool remove(const std::string& path) { return std::remove(resolvePath(path).c_str()) == 0; }
+  bool remove(const char* path) { return std::remove(resolvePath(path).c_str()) == 0; }
   bool rename(const char* from, const char* to) { return std::rename(from, to) == 0; }
 };
 

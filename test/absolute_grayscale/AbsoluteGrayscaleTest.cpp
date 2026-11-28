@@ -8,7 +8,11 @@ thread_local int rowAllocationToFail = -1;
 
 // Fail one row allocation without changing production allocator APIs.
 void* operator new[](std::size_t size, const std::nothrow_t&) noexcept {
-  if (rowAllocationToFail >= 0 && rowAllocationToFail-- == 0) return nullptr;
+  if (rowAllocationToFail == 0) {
+    rowAllocationToFail = -1;
+    return nullptr;
+  }
+  if (rowAllocationToFail > 0) rowAllocationToFail--;
   return ::operator new[](size);
 }
 

@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -73,6 +74,14 @@ TEST(TextBlockDisplay, RejectsACorruptDisplayOffset) {
     HalFile out;
     ASSERT_TRUE(out.open(path.c_str(), "wb"));
     ASSERT_TRUE(block.serialize(out));
+  }
+  {
+    // The full file must load with display forms, or size 8 would not cut the header.
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    const auto loaded = TextBlock::deserialize(in);
+    ASSERT_NE(loaded, nullptr);
+    ASSERT_NE(loaded->displayForm(0), nullptr);
   }
   // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2); then
   // sourceRanges[2], textOff[2], xpos[2], displayOff[2].
@@ -228,4 +237,33 @@ TEST(TextBlockRuby, RejectsARubyLengthOverTheLimit) {
 TEST(TextBlockRuby, RejectsACutOffRubyText) {
   EXPECT_EQ(loadDamagedRuby([](std::string& bytes, const size_t at) { bytes.resize(at + sizeof(uint32_t) + 3); }),
             nullptr);
+}
+
+TEST(TextBlockDisplay, RejectsATruncatedHeader) {
+  const std::vector<std::string> words = {"\xE0\xA6\x95", "\xE0\xA6\x96"};
+  TextBlock block(words, {0, 20}, {EpdFontFamily::REGULAR, EpdFontFamily::REGULAR}, {}, {}, BlockStyle(), {}, {}, {},
+                  UINT16_MAX, {kShaped, kShaped});
+  const ScopedTempDir tempDir;
+  const auto path = tempDir.path() / "truncated.bin";
+  {
+    HalFile out;
+    ASSERT_TRUE(out.open(path.c_str(), "wb"));
+    ASSERT_TRUE(block.serialize(out));
+  }
+  {
+    // The full file must load with display forms, or size 8 would not cut the header.
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    const auto loaded = TextBlock::deserialize(in);
+    ASSERT_NE(loaded, nullptr);
+    ASSERT_NE(loaded->displayForm(0), nullptr);
+  }
+  // Header: wordCount(2) flags(1) textBytes(2) paragraphStartWord(2) displayBytes(2).
+  // Longest first, so each size cuts the real header rather than zero padding.
+  for (const auto size : {8, 6, 4, 2, 1, 0}) {
+    std::filesystem::resize_file(path, size);
+    HalFile in;
+    ASSERT_TRUE(in.open(path.c_str(), "rb"));
+    EXPECT_EQ(TextBlock::deserialize(in), nullptr) << size << " header bytes";
+  }
 }

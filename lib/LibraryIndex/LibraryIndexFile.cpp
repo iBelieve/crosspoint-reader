@@ -113,7 +113,7 @@ bool LibraryIndexFile::recentRowsFor(const BookIdentity* books, const size_t cou
     for (uint16_t r = 0; r < batch && unresolved > 0; r++) {
       // memcpy, not a cast: the chunk buffer has no alignment guarantee for the
       // record's 32-bit fields.
-      ClixRecord record;
+      ClixRecord record{};
       memcpy(&record, chunk.get() + r * sizeof(ClixRecord), sizeof(ClixRecord));
       uint64_t hash = 0;
       bool hashRead = false;

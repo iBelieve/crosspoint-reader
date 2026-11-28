@@ -89,7 +89,10 @@ bool decode(JsonObjectConst item, Clipping& clipping, std::string& text, bool& d
 bool clippingSync::run(SyncRequest& sync, const std::string& bookPath, const std::string& documentHash) {
   if (!CLIPPINGS.loadForBook(bookPath, "", "", "epub")) return false;
   struct Unload {
+    Unload() = default;
     ~Unload() { CLIPPINGS.unload(); }
+    Unload(const Unload&) = delete;
+    Unload& operator=(const Unload&) = delete;
   } unload;
 
   const std::string url = KOREADER_STORE.getBaseUrl() + "/api/v1/clippings/" + documentHash;

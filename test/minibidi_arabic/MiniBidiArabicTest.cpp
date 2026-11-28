@@ -19,6 +19,10 @@
 #include "BidiUtils.h"
 #include "Utf8.h"
 
+extern "C" {
+#include "minibidi.h"
+}
+
 namespace {
 
 std::string encode(const std::vector<uint32_t>& codepoints) {
@@ -258,4 +262,12 @@ TEST(TransparentMark, LettersAndLatinMarksAreNot) {
   EXPECT_FALSE(BidiUtils::isTransparentMark(0x05D0));  // Hebrew alef
   EXPECT_FALSE(BidiUtils::isTransparentMark(0x0661));  // Arabic-Indic digit
   EXPECT_FALSE(BidiUtils::isTransparentMark('a'));
+}
+
+// An empty line has nothing to read; the paragraph level comes back unchanged.
+TEST(Bidi, EmptyLineKeepsParagraphLevel) {
+  bidi_char line[1] = {};
+  EXPECT_EQ(do_bidi(false, 0, line, 0), 0);
+  EXPECT_EQ(do_bidi(false, 1, line, 0), 1);
+  EXPECT_EQ(do_bidi(true, 1, line, 0), 1);
 }
