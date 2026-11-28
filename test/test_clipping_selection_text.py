@@ -1,31 +1,38 @@
 """Run with python3 test/test_clipping_selection_text.py (requires a host C/C++ compiler)."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/activities/reader/ClipSelectionActivity.cpp").read_text()
 reader_source = (ROOT / "src/activities/reader/EpubReaderActivity.cpp").read_text()
 header = (ROOT / "src/activities/reader/ClipSelectionActivity.h").read_text()
 word_box = "struct WordBox {" + header.split("struct WordBox {", 1)[1].split("  };", 1)[0] + "};"
-action_helpers = "\n".join(line for line in header.splitlines()
-                           if "int firstAction() const" in line or "int actionCount() const" in line)
-clean_word = "const char* cleanWordStart" + source.split("const char* cleanWordStart", 1)[1].split(
-    "}  // namespace", 1
-)[0]
-build_text = "bool ClipSelectionActivity::buildSelectedText" + source.split(
-    "bool ClipSelectionActivity::buildSelectedText", 1
-)[1].split("void ClipSelectionActivity::confirmSelection", 1)[0]
+action_helpers = "\n".join(
+    line for line in header.splitlines() if "int firstAction() const" in line or "int actionCount() const" in line
+)
+clean_word = (
+    "const char* cleanWordStart" + source.split("const char* cleanWordStart", 1)[1].split("}  // namespace", 1)[0]
+)
+build_text = (
+    "bool ClipSelectionActivity::buildSelectedText"
+    + source.split("bool ClipSelectionActivity::buildSelectedText", 1)[1].split(
+        "void ClipSelectionActivity::confirmSelection", 1
+    )[0]
+)
 confirm_source = source.split("void ClipSelectionActivity::confirmSelection", 1)[1]
-memory_guard = "  const auto heap = HalMemory::getDefaultHeap();" + confirm_source.split(
-    "  const auto heap = HalMemory::getDefaultHeap();", 1
-)[1].split("  if (lowMemory ||", 1)[0]
+memory_guard = (
+    "  const auto heap = HalMemory::getDefaultHeap();"
+    + confirm_source.split("  const auto heap = HalMemory::getDefaultHeap();", 1)[1].split("  if (lowMemory ||", 1)[0]
+)
+
 
 def method(name, next_name, text=source):
     signature = text.index(name)
     start = text.rfind("\n", 0, signature) + 1
-    return text[start:text.index(next_name, signature)].rstrip()
+    return text[start : text.index(next_name, signature)].rstrip()
+
 
 extract_words = method("bool ClipSelectionActivity::extractWords", "int ClipSelectionActivity::closestInRow")
 gap_draw = method("void ClipSelectionActivity::ditherGapBetween", "bool ClipSelectionActivity::renderIncremental")
@@ -33,11 +40,16 @@ incremental_draw = method("bool ClipSelectionActivity::renderIncremental", "void
 selection_draw = method("void ClipSelectionActivity::drawSelection", "void ClipSelectionActivity::render(")
 word_font = method("int clippingWordFont", "Rect clippingWordRect", reader_source)
 word_rect = method("Rect clippingWordRect", "int clampPercent", reader_source)
-saved_hit = method("int EpubReaderActivity::clippingAtPoint", "bool EpubReaderActivity::drawClippingHighlights", reader_source)
-saved_draw = method("bool EpubReaderActivity::drawClippingHighlights", "void EpubReaderActivity::renderStatusBar", reader_source)
+saved_hit = method(
+    "int EpubReaderActivity::clippingAtPoint", "bool EpubReaderActivity::drawClippingHighlights", reader_source
+)
+saved_draw = method(
+    "bool EpubReaderActivity::drawClippingHighlights", "void EpubReaderActivity::renderStatusBar", reader_source
+)
 
 # Compile production extraction, export, and redraws with bounded UI/rendering stubs.
-harness = r"""
+harness = (
+    r"""
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -290,12 +302,19 @@ struct HalMemory {
   static HeapStats getDefaultHeap() { return stats; }
 };
 bool selectionLowMemory(const int first, const int last) {
-""" + memory_guard + r"""
+"""
+    + memory_guard
+    + r"""
   return lowMemory;
 }
-""" + clean_word + r"""
+"""
+    + clean_word
+    + r"""
 struct ClipSelectionActivity {
-""" + word_box + action_helpers + r"""
+"""
+    + word_box
+    + action_helpers
+    + r"""
   std::unique_ptr<WordBox[]> words = makeUniqueNoThrow<WordBox[]>(240);
   static constexpr size_t MAX_SELECTABLE_WORDS = 240;
   enum class Mode { Clip, Lookup, DefinitionLookup };
@@ -327,7 +346,13 @@ struct ClipSelectionActivity {
   Rect handleRect(int, bool) const { return {}; }
   Rect actionRect() const { return {}; }
 };
-""" + build_text + extract_words + gap_draw + incremental_draw + selection_draw + r"""
+"""
+    + build_text
+    + extract_words
+    + gap_draw
+    + incremental_draw
+    + selection_draw
+    + r"""
 struct EpubReaderActivity {
   Renderer& renderer;
   explicit EpubReaderActivity(Renderer& renderer) : renderer(renderer) {}
@@ -337,7 +362,12 @@ struct EpubReaderActivity {
   int clippingAtPoint(const Page&, int, int) const;
   bool drawClippingHighlights(const Page&, int, int, int) const;
 };
-""" + word_font + word_rect + saved_hit + saved_draw + r"""
+"""
+    + word_font
+    + word_rect
+    + saved_hit
+    + saved_draw
+    + r"""
 int loadLine(ClipSelectionActivity& activity, const std::vector<std::string>& logical,
              bool rtl, int first = 0, uint32_t offset = 0, uint16_t row = 0) {
   std::vector<uint16_t> visual;
@@ -649,20 +679,40 @@ int main() {
   expect(activity, 0, 239, expected.c_str());
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "selection.cpp"
     executable = Path(directory) / "selection"
     bidi_object = Path(directory) / "minibidi.o"
     cpp.write_text(harness)
     subprocess.run(["cc", "-c", str(ROOT / "lib/MiniBidi/minibidi.c"), "-o", str(bidi_object)], check=True)
-    subprocess.run([
-        "c++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
-        "-I", str(ROOT / "src"), "-I", str(ROOT / "lib/Memory"),
-        "-I", str(ROOT / "test/minibidi_arabic/stubs"),
-        "-I", str(ROOT / "lib/MiniBidi"), "-I", str(ROOT / "lib/Utf8"),
-        "-I", str(ROOT / "lib/Epub"),
-        str(cpp), str(bidi_object), str(ROOT / "lib/MiniBidi/BidiUtils.cpp"),
-        str(ROOT / "lib/Utf8/Utf8.cpp"), "-o", str(executable),
-    ], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I",
+            str(ROOT / "src"),
+            "-I",
+            str(ROOT / "lib/Memory"),
+            "-I",
+            str(ROOT / "test/minibidi_arabic/stubs"),
+            "-I",
+            str(ROOT / "lib/MiniBidi"),
+            "-I",
+            str(ROOT / "lib/Utf8"),
+            "-I",
+            str(ROOT / "lib/Epub"),
+            str(cpp),
+            str(bidi_object),
+            str(ROOT / "lib/MiniBidi/BidiUtils.cpp"),
+            str(ROOT / "lib/Utf8/Utf8.cpp"),
+            "-o",
+            str(executable),
+        ],
+        check=True,
+    )
     subprocess.run([str(executable)], check=True)
 print("Clipping selection text regression checks passed")

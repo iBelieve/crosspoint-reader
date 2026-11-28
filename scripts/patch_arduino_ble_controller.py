@@ -4,8 +4,8 @@ PioArduino 55.03.311 retains the packaged -lbtdm_app linker list after a custom
 SDK rebuild. ESP-IDF selects libbtdm_app_flash.a for this configuration. Mixing
 the flash-only header with the other archive makes controller init fail.
 """
-from pathlib import Path
 
+from pathlib import Path
 
 _FLASH_ONLY_BT_ROM_SCRIPTS = frozenset(
     {
@@ -75,8 +75,8 @@ def configure_controller(env):
 
 
 try:
-    Import("env")  # noqa: F821
+    Import("env")
 except NameError:
     pass
 else:
-    configure_controller(env)  # noqa: F821
+    configure_controller(env)

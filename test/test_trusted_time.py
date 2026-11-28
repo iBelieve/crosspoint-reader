@@ -1,14 +1,13 @@
 """Compile TrustedTime against host stubs and check its timezone contract."""
 
-from pathlib import Path
 import subprocess
 import tempfile
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 STUBS = {
-    "Arduino.h": r'''
+    "Arduino.h": r"""
 #pragma once
 #include <cstdlib>
 #include <ctime>
@@ -29,8 +28,8 @@ inline void configTzTime(const char* tz, const char*) {
   setenv("TZ", tz, 1);
   tzset();
 }
-''',
-    "Preferences.h": r'''
+""",
+    "Preferences.h": r"""
 #pragma once
 #include <cstdint>
 // Stands in for the NVS floor: keeps the last written value for the process so
@@ -42,19 +41,19 @@ struct Preferences {
   void putLong64(const char*, int64_t v) { storedFloor = v; }
   void end() {}
 };
-''',
-    "Logging.h": '#pragma once\n#define LOG_DBG(...) ((void)0)\n',
-    "esp_sntp.h": r'''
+""",
+    "Logging.h": "#pragma once\n#define LOG_DBG(...) ((void)0)\n",
+    "esp_sntp.h": r"""
 #pragma once
 #include <Arduino.h>
 constexpr int SNTP_SYNC_STATUS_COMPLETED = 1;
 inline bool esp_sntp_enabled() { return enabled; }
 inline int sntp_get_sync_status() { return completed ? SNTP_SYNC_STATUS_COMPLETED : 0; }
 inline void sntp_set_time_sync_notification_cb(void (*)(timeval*)) {}
-''',
+""",
 }
 
-CHECK = r'''
+CHECK = r"""
 #include <TrustedTime.h>
 #include <Arduino.h>
 #include <Preferences.h>
@@ -140,7 +139,7 @@ int main() {
   trustedtime::startSync();
   assert(strcmp(getenv("TZ"), "UTC0") == 0);
 }
-'''
+"""
 
 
 if __name__ == "__main__":
@@ -149,11 +148,21 @@ if __name__ == "__main__":
         for name, content in STUBS.items():
             (work / name).write_text(content)
         (work / "check.cpp").write_text(CHECK)
-        subprocess.run([
-            "c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
-            f"-I{work}", f"-I{ROOT / 'lib/TrustedTime'}",
-            str(ROOT / "lib/TrustedTime/TrustedTime.cpp"), str(work / "check.cpp"),
-            "-o", str(work / "check"),
-        ], check=True)
+        subprocess.run(
+            [
+                "c++",
+                "-std=c++17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                f"-I{work}",
+                f"-I{ROOT / 'lib/TrustedTime'}",
+                str(ROOT / "lib/TrustedTime/TrustedTime.cpp"),
+                str(work / "check.cpp"),
+                "-o",
+                str(work / "check"),
+            ],
+            check=True,
+        )
         subprocess.run([str(work / "check")], check=True)
     print("TrustedTime clock and timezone checks passed")

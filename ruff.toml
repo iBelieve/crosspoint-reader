@@ -1,0 +1,36 @@
+# Lint and format settings for the repository's Python scripts and tests.
+# CI runs `ruff check` and `ruff format --check` on the paths in `include`.
+required-version = "==0.16.9"  # keep in sync with ci.yml
+line-length = 120
+# PlatformIO build scripts run in PlatformIO's own Python; README.md documents
+# 3.8 as the minimum.
+target-version = "py38"
+include = ["scripts/**/*.py", "test/**/*.py", ".github/scripts/**/*.py"]
+# Not covered yet: lib/EpdFont/scripts (font tooling whose output is checked in).
+extend-exclude = ["scripts/vendor"]
+
+[lint]
+select = [
+  "E", "W",  # pycodestyle
+  "F",       # pyflakes
+  "I",       # isort
+  "B",       # bugbear
+  "UP",      # pyupgrade
+  "C4",      # comprehensions
+  "SIM",     # simplify
+  "PIE",
+  "PLE", "PLW",
+  "RUF",
+]
+ignore = [
+  # Test EPUBs and translations use typographic quotes, dashes and other
+  # non-ASCII text on purpose.
+  "RUF001", "RUF002", "RUF003",
+  # The formatter wraps code; the long lines left are XHTML/CSS string
+  # literals in the EPUB generators and fixtures.
+  "E501",
+]
+
+[lint.per-file-ignores]
+# SCons injects Import and env into PlatformIO extra_scripts.
+"scripts/{app_only_upload,patch_*,register_unit_tests_target}.py" = ["F821"]

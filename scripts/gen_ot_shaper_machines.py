@@ -19,6 +19,7 @@ OUTPUT = Path(__file__).resolve().parent.parent / "lib" / "OtShaper" / "OtSyllab
 
 # --- Regular expressions over category sets -------------------------------------
 
+
 class Re:
     def __add__(self, other):  # concatenation
         return Seq(self, other)
@@ -68,9 +69,10 @@ def plus(r):
 
 # --- Thompson NFA -------------------------------------------------------------------
 
+
 class Nfa:
     def __init__(self):
-        self.eps = []    # state -> [state]
+        self.eps = []  # state -> [state]
         self.edges = []  # state -> [(cats or ANY, state)]
 
     def state(self):
@@ -131,8 +133,12 @@ def compile_scanner(patterns, alphabet):
     # Categories that behave identically share one input class; categories
     # outside the grammar (only matched by ANY) form class 0.
     def signature(cat):
-        return tuple(sorted((i, j) for i, es in enumerate(nfa.edges) for j, (cats, _) in enumerate(es)
-                            if cats is ANY or cat in cats))
+        return tuple(
+            sorted(
+                (i, j) for i, es in enumerate(nfa.edges) for j, (cats, _) in enumerate(es) if cats is ANY or cat in cats
+            )
+        )
+
     classes = {}
     class_of = {}
     other_sig = signature(-1)
@@ -211,9 +217,31 @@ def compile_scanner(patterns, alphabet):
 
 # --- Grammars ----------------------------------------------------------------------
 
+
 def indic_grammar():
     X, C, V, N, H, ZWNJ, ZWJ, M, SM, A, VD, PLACEHOLDER, DOTTEDCIRCLE, RS, MPst, Repha, Ra, CM, Symbol, CS, SMPst = (
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 57)
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        57,
+    )
     c = Sym(C, Ra)
     n = opt(opt(Sym(ZWNJ)) + Sym(RS)) + opt(Sym(N) + opt(Sym(N)))
     z = Sym(ZWJ, ZWNJ)
@@ -230,34 +258,85 @@ def indic_grammar():
     complex_syllable_tail = star(halant_group + cn) + medial_group + halant_or_matra_group + syllable_tail
     consonant_syllable = opt(Sym(Repha, CS)) + cn + complex_syllable_tail
     vowel_syllable = opt(reph) + Sym(V) + opt(n) + (Sym(ZWJ) | complex_syllable_tail)
-    standalone_cluster = ((opt(Sym(Repha, CS)) + Sym(PLACEHOLDER)) | (opt(reph) + Sym(DOTTEDCIRCLE))) + opt(n) + \
-        complex_syllable_tail
+    standalone_cluster = (
+        ((opt(Sym(Repha, CS)) + Sym(PLACEHOLDER)) | (opt(reph) + Sym(DOTTEDCIRCLE))) + opt(n) + complex_syllable_tail
+    )
     symbol_cluster = symbol + syllable_tail
     broken_cluster = opt(reph) + opt(n) + complex_syllable_tail
     # Token values: indic_syllable_type_t.
-    patterns = [(consonant_syllable, 0), (vowel_syllable, 1), (standalone_cluster, 2), (symbol_cluster, 3),
-                (Sym(SMPst), 5), (broken_cluster, 4), (ANY, 5)]
-    return patterns, sorted({X, C, V, N, H, ZWNJ, ZWJ, M, SM, A, PLACEHOLDER, DOTTEDCIRCLE, RS, MPst, Repha, Ra, CM,
-                             Symbol, CS, SMPst})
+    patterns = [
+        (consonant_syllable, 0),
+        (vowel_syllable, 1),
+        (standalone_cluster, 2),
+        (symbol_cluster, 3),
+        (Sym(SMPst), 5),
+        (broken_cluster, 4),
+        (ANY, 5),
+    ]
+    return patterns, sorted(
+        {X, C, V, N, H, ZWNJ, ZWJ, M, SM, A, PLACEHOLDER, DOTTEDCIRCLE, RS, MPst, Repha, Ra, CM, Symbol, CS, SMPst}
+    )
 
 
 def use_grammar():
-    O, B, N, GB, CGJ, SUB, H, HN, ZWNJ, WJ, R, CS, IS, Sk, G, J, SB, SE, HVM, HM, HR, RK = (
-        0, 1, 4, 5, 6, 11, 12, 13, 14, 16, 18, 43, 44, 48, 49, 50, 51, 52, 53, 54, 55, 56)
+    # Names match the HarfBuzz USE machine categories.
+    O, B, N, GB, CGJ, SUB, H, HN, ZWNJ, WJ, R, CS, IS, Sk, G, J, SB, SE, HVM, HM, HR, RK = (  # noqa: E741
+        0,
+        1,
+        4,
+        5,
+        6,
+        11,
+        12,
+        13,
+        14,
+        16,
+        18,
+        43,
+        44,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+    )
     FAbv, FBlw, FPst, MAbv, MBlw, MPst, MPre, CMAbv, CMBlw, VAbv, VBlw, VPst, VPre, VMAbv, VMBlw, VMPst, VMPre = (
-        24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 22, 37, 38, 39, 23)
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        22,
+        37,
+        38,
+        39,
+        23,
+    )
     SMAbv, SMBlw, FMAbv, FMBlw, FMPst = 41, 42, 45, 46, 47
     h = Sym(H, HVM, IS, Sk)
-    consonant_modifiers = star(Sym(CMAbv)) + star(Sym(CMBlw)) + \
-        star(((h + Sym(B)) | Sym(SUB)) + star(Sym(CMAbv)) + star(Sym(CMBlw)))
+    consonant_modifiers = (
+        star(Sym(CMAbv)) + star(Sym(CMBlw)) + star(((h + Sym(B)) | Sym(SUB)) + star(Sym(CMAbv)) + star(Sym(CMBlw)))
+    )
     medial_consonants = opt(Sym(MPre)) + opt(Sym(MAbv)) + opt(Sym(MBlw)) + opt(Sym(MPst))
     dependent_vowels = (star(Sym(VPre)) + star(Sym(VAbv)) + star(Sym(VBlw)) + star(Sym(VPst))) | Sym(H)
     vowel_modifiers = opt(Sym(HVM)) + star(Sym(VMPre)) + star(Sym(VMAbv)) + star(Sym(VMBlw)) + star(Sym(VMPst))
     final_consonants = star(Sym(FAbv)) + star(Sym(FBlw)) + star(Sym(FPst))
     final_modifiers = (star(Sym(FMAbv)) + star(Sym(FMBlw))) | opt(Sym(FMPst))
     complex_syllable_start = opt(Sym(R, CS)) + Sym(B, GB)
-    complex_syllable_middle = consonant_modifiers + medial_consonants + dependent_vowels + vowel_modifiers + \
-        star(Sym(Sk) + Sym(B))
+    complex_syllable_middle = (
+        consonant_modifiers + medial_consonants + dependent_vowels + vowel_modifiers + star(Sym(Sk) + Sym(B))
+    )
     complex_syllable_tail = complex_syllable_middle + final_consonants + final_modifiers
     number_joiner_terminated_cluster_tail = star(Sym(HN) + Sym(N)) + Sym(HN)
     numeral_cluster_tail = plus(Sym(HN) + Sym(N))
@@ -276,12 +355,66 @@ def use_grammar():
     hieroglyph_cluster = star(Sym(SB)) + hieroglyph_unit + star(Sym(J) + star(Sym(SB)) + opt(hieroglyph_unit))
     z = opt(Sym(ZWNJ))
     # Token values: use_syllable_type_t.
-    patterns = [(virama_terminated_cluster + z, 0), (sakot_terminated_cluster + z, 1), (standard_cluster + z, 2),
-                (number_joiner_terminated_cluster + z, 3), (numeral_cluster + z, 4), (symbol_cluster + z, 5),
-                (hieroglyph_cluster + z, 6), (Sym(FMPst), 8), (broken_cluster + z, 7), (ANY, 8)]
-    alphabet = sorted({O, B, N, GB, CGJ, SUB, H, HN, ZWNJ, WJ, R, CS, IS, Sk, G, J, SB, SE, HVM, HM, HR, RK, FAbv,
-                       FBlw, FPst, MAbv, MBlw, MPst, MPre, CMAbv, CMBlw, VAbv, VBlw, VPst, VPre, VMAbv, VMBlw,
-                       VMPst, VMPre, SMAbv, SMBlw, FMAbv, FMBlw, FMPst})
+    patterns = [
+        (virama_terminated_cluster + z, 0),
+        (sakot_terminated_cluster + z, 1),
+        (standard_cluster + z, 2),
+        (number_joiner_terminated_cluster + z, 3),
+        (numeral_cluster + z, 4),
+        (symbol_cluster + z, 5),
+        (hieroglyph_cluster + z, 6),
+        (Sym(FMPst), 8),
+        (broken_cluster + z, 7),
+        (ANY, 8),
+    ]
+    alphabet = sorted(
+        {
+            O,
+            B,
+            N,
+            GB,
+            CGJ,
+            SUB,
+            H,
+            HN,
+            ZWNJ,
+            WJ,
+            R,
+            CS,
+            IS,
+            Sk,
+            G,
+            J,
+            SB,
+            SE,
+            HVM,
+            HM,
+            HR,
+            RK,
+            FAbv,
+            FBlw,
+            FPst,
+            MAbv,
+            MBlw,
+            MPst,
+            MPre,
+            CMAbv,
+            CMBlw,
+            VAbv,
+            VBlw,
+            VPst,
+            VPre,
+            VMAbv,
+            VMBlw,
+            VMPst,
+            VMPre,
+            SMAbv,
+            SMBlw,
+            FMAbv,
+            FMBlw,
+            FMPst,
+        }
+    )
     return patterns, alphabet
 
 
@@ -289,6 +422,7 @@ def used_categories(shift):
     """Categories (Indic: shift 13, USE: shift 23) OtUnicodeData.h assigns,
     so input classes are only spent on categories that occur."""
     import re
+
     text = (OUTPUT.parent / "OtUnicodeData.h").read_text()
     props = text.split("constexpr uint32_t PROPS[] = {")[1].split("struct Decomposition")[0]
     values = [int(v, 16) for v in re.findall(r"0x[0-9A-F]{8}", props)]
@@ -298,8 +432,16 @@ def used_categories(shift):
 def order_scanner_states(name, table, accept):
     """Order noninitial states by a fixed digest key for reproducible table layout."""
     assert 0 < len(table) < 255
-    order = [0] + sorted(range(1, len(table)), key=lambda state: (
-        hashlib.sha256(f"CrossPoint/OtSyllableMachines/v1/{name}/{state}".encode("ascii")).digest(), state))
+    order = [
+        0,
+        *sorted(
+            range(1, len(table)),
+            key=lambda state: (
+                hashlib.sha256(f"CrossPoint/OtSyllableMachines/v1/{name}/{state}".encode("ascii")).digest(),
+                state,
+            ),
+        ),
+    ]
     mapping = [0] * len(table)
     for new, old in enumerate(order):
         mapping[old] = new
@@ -315,10 +457,12 @@ def emit(name, patterns, alphabet, source, extra=()):
     classes = [0] * 64
     for cat, cls in class_of.items():
         classes[cat] = cls
-    lines = [f"// {source}: {len(table)} states x {nclasses} input classes.",
-             f"constexpr uint8_t {name}_CLASSES[CATEGORY_COUNT] = {{{', '.join(map(str, classes))}}};",
-             f"constexpr uint8_t {name}_CLASS_COUNT = {nclasses};",
-             f"constexpr uint8_t {name}_TRANSITIONS[] = {{"]
+    lines = [
+        f"// {source}: {len(table)} states x {nclasses} input classes.",
+        f"constexpr uint8_t {name}_CLASSES[CATEGORY_COUNT] = {{{', '.join(map(str, classes))}}};",
+        f"constexpr uint8_t {name}_CLASS_COUNT = {nclasses};",
+        f"constexpr uint8_t {name}_TRANSITIONS[] = {{",
+    ]
     for row in table:
         lines.append("    " + ", ".join(str(t if t >= 0 else 255) for t in row) + ",")
     lines.append("};")

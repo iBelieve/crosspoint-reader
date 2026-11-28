@@ -1,15 +1,13 @@
 """Run with python3 test/test_remote_button_input.py (requires a host C++ compiler)."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/MappedInputManager.cpp").read_text()
 settings_header = (ROOT / "src/CrossPointSettings.h").read_text()
-power_actions = "enum SHORT_PWRBTN {" + settings_header.split(
-    "enum SHORT_PWRBTN {", 1
-)[1].split("};", 1)[0] + "};"
+power_actions = "enum SHORT_PWRBTN {" + settings_header.split("enum SHORT_PWRBTN {", 1)[1].split("};", 1)[0] + "};"
 # Exercise production frame/dispatch methods with physical input under test control.
 methods = []
 for signature, following in (
@@ -18,9 +16,12 @@ for signature, following in (
     ("bool MappedInputManager::isPressed(", "MappedInputManager::Labels MappedInputManager::mapLabels("),
 ):
     methods.append(signature + source.split(signature, 1)[1].split(following, 1)[0])
-methods.append("#if FREEINK_CAP_TOUCH\n" + "bool MappedInputManager::wasPowerConfirmClick() const" + source.split(
-    "bool MappedInputManager::wasPowerConfirmClick() const", 1
-)[1].split("#endif", 1)[0] + "#endif\n")
+methods.append(
+    "#if FREEINK_CAP_TOUCH\n"
+    + "bool MappedInputManager::wasPowerConfirmClick() const"
+    + source.split("bool MappedInputManager::wasPowerConfirmClick() const", 1)[1].split("#endif", 1)[0]
+    + "#endif\n"
+)
 
 stub = r"""
 #pragma once
@@ -48,7 +49,8 @@ struct HalGPIO {
   bool wasHomeKeyPressed() const { return false; }
 };
 """
-harness = r"""
+harness = (
+    r"""
 #include <cassert>
 #include "MappedInputManager.h"
 class GfxRenderer {};
@@ -85,7 +87,9 @@ bool MappedInputManager::mapButton(Button b, bool (HalGPIO::*fn)(uint8_t) const)
 }
 bool MappedInputManager::wasBackGesture() const { return false; }
 MappedInputManager::SwipeDir MappedInputManager::wasSwipe(int*, int*) const { return SwipeDir::None; }
-""" + "\n".join(methods) + r"""
+"""
+    + "\n".join(methods)
+    + r"""
 int main() {
   HalGPIO gpio;
   GfxRenderer renderer;
@@ -221,12 +225,18 @@ int main() {
   SETTINGS.doublePwrBtn = doubleAction;
 }
 """
+)
 harness = harness.replace("POWER_ACTIONS", power_actions)
 manager_source = (ROOT / "src/activities/ActivityManager.cpp").read_text()
-remote_turn = "bool ActivityManager::remoteTurn(" + manager_source.split(
-    "bool ActivityManager::remoteTurn(", 1
-)[1].split("bool ActivityManager::handleForcedRefresh()", 1)[0]
-harness = harness.replace("int main() {", r"""
+remote_turn = (
+    "bool ActivityManager::remoteTurn("
+    + manager_source.split("bool ActivityManager::remoteTurn(", 1)[1].split(
+        "bool ActivityManager::handleForcedRefresh()", 1
+    )[0]
+)
+harness = harness.replace(
+    "int main() {",
+    r"""
 #include <atomic>
 #include <memory>
 #include "activities/reader/RemoteTurnGate.h"
@@ -249,7 +259,9 @@ struct ActivityManager {
   void requestUpdate() {}
   bool remoteTurn(bool forward, bool chapter);
 };
-""" + remote_turn + r"""
+"""
+    + remote_turn
+    + r"""
 void checkRouting(MappedInputManager& input) {
   ActivityManager manager{input};
   input.update();
@@ -274,14 +286,15 @@ void checkRouting(MappedInputManager& input) {
   assert(!manager.remoteTurn(true, false));
 }
 int main() {
-""")
+""",
+)
 harness = harness.replace("  using Button =", "  checkRouting(input);\n  using Button =")
 # Remote dispatch must work on both the button board and X4 Pro with click classification enabled.
 harness = harness.replace("int main() {", "void checkRemoteButtons() {")
 picker = (ROOT / "src/activities/reader/EpubReaderFootnoteSelectActivity.cpp").read_text()
-picker_confirm = "  if ((mappedInput.wasReleased(" + picker.split(
-    "  if ((mappedInput.wasReleased(", 1
-)[1].split(" {", 1)[0]
+picker_confirm = (
+    "  if ((mappedInput.wasReleased(" + picker.split("  if ((mappedInput.wasReleased(", 1)[1].split(" {", 1)[0]
+)
 harness += r"""
 #include <vector>
 bool pickerConfirms(const MappedInputManager& mappedInput) {
@@ -408,10 +421,13 @@ wake_validation_end = main_source.index("\n  }\n", wake_validation) + len("\n  }
 frontlight_init = main_source.index("  Frontlight.begin(")
 assert wake_validation_end < frontlight_init < main_source.index("  handleSlideSwitch();", wake_validation_end)
 release_guard = main_source.split("  if (mappedInputManager.wasPowerReleaseConsumed()) {", 1)[1].split(
-    "  const bool powerDoubleClickEnabled =", 1)[0]
-sleep_dispatch = main_source.split("  const bool awaitingClickWindow =", 1)[1].split(
-    "#if FREEINK_DEVICE_PAPERMONO", 1)[0]
-dispatch_harness = r"""
+    "  const bool powerDoubleClickEnabled =", 1
+)[0]
+sleep_dispatch = main_source.split("  const bool awaitingClickWindow =", 1)[1].split("#if FREEINK_DEVICE_PAPERMONO", 1)[
+    0
+]
+dispatch_harness = (
+    r"""
 bool slept = false, forwardedRelease = false;
 void enterDeepSleep() { slept = true; }
 #define LOG_DBG(...) ((void)0)
@@ -420,7 +436,11 @@ void dispatchSleep(MappedInputManager& mappedInputManager, HalGPIO& gpio,
                    unsigned long loopStartTime = millis()) {
   slept = forwardedRelease = false;
   if (mappedInputManager.wasPowerReleaseConsumed()) {
-""" + release_guard + "  const bool awaitingClickWindow =" + sleep_dispatch + r"""
+"""
+    + release_guard
+    + "  const bool awaitingClickWindow ="
+    + sleep_dispatch
+    + r"""
   forwardedRelease = true;
 }
 void checkSleepDispatch(MappedInputManager& input, HalGPIO& gpio) {
@@ -441,17 +461,29 @@ void checkSleepDispatch(MappedInputManager& input, HalGPIO& gpio) {
   assert(!slept);  // Short click still waits for X4 Pro's double-click window.
 }
 """
+)
 harness = harness.replace("void checkRemoteButtons() {", dispatch_harness + "void checkRemoteButtons() {")
-with tempfile.TemporaryDirectory() as directory:
-    directory = Path(directory)
+with tempfile.TemporaryDirectory() as temporary:
+    directory = Path(temporary)
     (directory / "HalGPIO.h").write_text(stub)
     cpp = directory / "remote_input.cpp"
     executable = directory / "remote_input"
     cpp.write_text("#include <initializer_list>\n" + harness)
     for touch in (0, 1):
-        subprocess.run([
-            "c++", "-std=c++20", f"-DFREEINK_CAP_TOUCH={touch}", "-I", str(directory),
-            "-I", str(ROOT / "src"), str(cpp), "-o", str(executable),
-        ], check=True)
+        subprocess.run(
+            [
+                "c++",
+                "-std=c++20",
+                f"-DFREEINK_CAP_TOUCH={touch}",
+                "-I",
+                str(directory),
+                "-I",
+                str(ROOT / "src"),
+                str(cpp),
+                "-o",
+                str(executable),
+            ],
+            check=True,
+        )
         subprocess.run([str(executable)], check=True)
 print("Remote button input regression checks passed")

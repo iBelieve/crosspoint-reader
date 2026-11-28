@@ -138,8 +138,8 @@ Also includes:
 import io
 import os
 import sys
-import zipfile
 import uuid
+import zipfile
 from datetime import datetime
 
 if any(arg in ("-h", "--help") for arg in sys.argv[1:]):
@@ -155,8 +155,13 @@ except ImportError:
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _NOTOSERIF_FONT = os.path.join(
-    _PROJECT_ROOT, "lib", "EpdFont", "builtinFonts", "source",
-    "NotoSerif", "NotoSerif-Regular.ttf",
+    _PROJECT_ROOT,
+    "lib",
+    "EpdFont",
+    "builtinFonts",
+    "source",
+    "NotoSerif",
+    "NotoSerif-Regular.ttf",
 )
 
 
@@ -166,7 +171,7 @@ def _get_font(size=20):
     for path in paths:
         try:
             return ImageFont.truetype(path, size)
-        except (OSError, IOError):
+        except OSError:
             continue
     return ImageFont.load_default(size)
 
@@ -202,15 +207,14 @@ def create_cover_image():
     _draw_text_centered(draw, ornament_y, "*", font_ornament, text_color, width)
 
     subtitle_y = ornament_y + 72
-    _draw_text_centered(draw, subtitle_y, "A Typographer\u2019s Compendium",
-                        font_subtitle, text_color, width)
+    _draw_text_centered(draw, subtitle_y, "A Typographer\u2019s Compendium", font_subtitle, text_color, width)
 
-    _draw_text_centered(draw, height - 70, "CROSSPOINT TEST FIXTURES",
-                        font_author, text_color, width)
+    _draw_text_centered(draw, height - 70, "CROSSPOINT TEST FIXTURES", font_author, text_color, width)
 
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=90)
     return buf.getvalue()
+
 
 BOOK_UUID = str(uuid.uuid4())
 TITLE = "Kerning &amp; Ligature Edge Cases"

@@ -184,6 +184,6 @@ test('Tab after jumping to a later plugin begins inside its card', {
     // A Chrome helper holding the pipes must not keep node alive.
     child.stdout.destroy();
     child.stderr.destroy();
-    try { fs.rmSync(profile, {recursive: true, force: true}); } catch {}
+    try { fs.rmSync(profile, {recursive: true, force: true}); } catch { /* best-effort cleanup */ }
   }
 });

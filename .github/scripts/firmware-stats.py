@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Extract PlatformIO's static memory measurements without rounding."""
+
 import json
 import re
 import sys
@@ -18,5 +19,4 @@ def parse_stats(log, environment, sha, image=None, base_sha=None):
 
 
 if __name__ == "__main__":
-    print(json.dumps(parse_stats(Path(sys.argv[1]).read_text(), sys.argv[2], sys.argv[3],
-                                 sys.argv[4], sys.argv[5])))
+    print(json.dumps(parse_stats(Path(sys.argv[1]).read_text(), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])))

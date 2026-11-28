@@ -43,8 +43,12 @@ def harfbuzz_lines(font_path, lines, scale, ppem, lang):
         if lang:
             buf.language = lang
         hb.shape(font, buf, {})
-        out.append(" ".join(f"{i.codepoint}+{p.x_advance}+{p.x_offset}+{p.y_offset}"
-                            for i, p in zip(buf.glyph_infos, buf.glyph_positions)))
+        out.append(
+            " ".join(
+                f"{i.codepoint}+{p.x_advance}+{p.x_offset}+{p.y_offset}"
+                for i, p in zip(buf.glyph_infos, buf.glyph_positions)
+            )
+        )
     return out
 
 
@@ -62,12 +66,17 @@ def main():
     lines = []
     for path in args.files:
         with open(path, encoding="utf-8") as f:
-            lines += [l.strip() for l in f if l.strip() and not l.startswith("#")]
+            lines += [line.strip() for line in f if line.strip() and not line.startswith("#")]
     lines = list(dict.fromkeys(lines))
 
     expected = harfbuzz_lines(args.font, lines, args.scale, args.ppem, args.lang)
-    run = subprocess.run([args.cli, args.font, str(args.scale), str(args.ppem), args.lang or "-"],
-                         input="\n".join(lines) + "\n", capture_output=True, text=True, check=True)
+    run = subprocess.run(
+        [args.cli, args.font, str(args.scale), str(args.ppem), args.lang or "-"],
+        input="\n".join(lines) + "\n",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     actual = run.stdout.splitlines()
 
     bad = 0
