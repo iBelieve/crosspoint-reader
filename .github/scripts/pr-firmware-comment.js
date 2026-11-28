@@ -106,15 +106,16 @@ module.exports = async ({github, context, core}) => {
 
   // A delayed completion or rerun must not replace a newer finished run for this
   // head. A newer run still running, or cancelled, does not count: one that
-  // finishes later overwrites this comment.
+  // finishes later overwrites this comment. A cancelled run yields to any newer
+  // run, so a queued run replaced before it started does not blank the comment.
   const latestRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
     owner, repo, workflow_id: run.workflow_id, event: 'pull_request',
     head_sha: run.head_sha, per_page: 100,
   });
   const supersedes = candidate => candidate.head_repository?.id === run.head_repository.id &&
     candidate.head_branch === run.head_branch &&
-    candidate.status === 'completed' && candidate.conclusion !== 'cancelled' &&
-    (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt));
+    (candidate.id > run.id || (candidate.id === run.id && candidate.run_attempt > run.run_attempt)) &&
+    (run.conclusion === 'cancelled' || (candidate.status === 'completed' && candidate.conclusion !== 'cancelled'));
   if (latestRuns.some(supersedes)) {
     core.notice('Skipping superseded run or attempt.');
     return;

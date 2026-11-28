@@ -196,5 +196,9 @@ test('cancelled or unfinished newer runs do not supersede a finished run', async
     f.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
       ? [{...f.run, id: 21, ...newer}] : paginate(method, args);
     await publish(f); assert.equal(f.posted.length, 1);
+    const c = fixture(); c.run.conclusion = 'cancelled'; const paginateC = c.github.paginate;
+    c.github.paginate = async (method, args) => method === 'runs' && args.event === 'pull_request'
+      ? [{...c.run, id: 21, ...newer}] : paginateC(method, args);
+    await publish(c); assert.equal(c.posted.length, 0, 'a cancelled run yields to any newer run');
   }
 });

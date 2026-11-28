@@ -272,7 +272,22 @@ jobs:
       - unit-tests
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
+      - name: Fail if all-boards was added after this run started
+        # A run or re-run started before the label builds only x4c. Its result
+        # must not stand in for the all-boards build.
+        if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'all-boards') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_URL: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}
+        run: |
+          labels="$(gh api "$PULL_URL" --jq '.labels[].name')"
+          if grep -qx all-boards <<<"$labels"; then
+            echo "::error::The PR now has the all-boards label, but this run built only x4c. Re-add the label or push to start an all-boards run."
+            exit 1
+          fi
       - name: Fail because needed jobs failed
         # Fail if any job failed or was cancelled (skipped jobs are ok)
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
