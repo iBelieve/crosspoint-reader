@@ -202,7 +202,8 @@ jobs:
 
   unit-tests:
     name: Unit tests (${{ matrix.cc }})
-    runs-on: ubuntu-latest
+    # Warnings fail this build, so pin the image and its compilers (GCC 13, Clang 18).
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
