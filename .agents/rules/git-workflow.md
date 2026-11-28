@@ -82,9 +82,12 @@ below are from the repository root.
   `.agents/rules/ui-activities.md`, the AGENTS.md intro paragraph (x4c memory
   target), `.agents/rules/hardware-resources.md` (memory facts, "Resource
   target", x4c size comparison), `.agents/rules/architecture-hal.md`
-  (framebuffer line), `.agents/skills/scope-discipline/SKILL.md` (budget step),
-  `README.md` (scope links, x4c pre-PR commands), `docs/contributing/`
-  (x4c check and build commands), `ROADMAP.md`
+  (framebuffer line), `.github/workflows/ci.yml` (x4c-only build matrix,
+  `all-boards` label, concurrency, x4c cppcheck),
+  `.github/scripts/pr-firmware-comment.js` and `firmware-size-comparison.js`
+  (built-board list, x4c baseline wording), `README.md` (scope links, x4c
+  pre-PR and flash commands), `docs/contributing/` (x4c check, build and flash
+  commands), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
 - **Everything else** in `.agents/` is upstream technical guidance. Take

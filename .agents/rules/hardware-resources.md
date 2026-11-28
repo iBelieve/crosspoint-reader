@@ -4,7 +4,8 @@
 
 * MCUs: ESP32-C3 (X3/X4, single-core RISC-V @ 160MHz), ESP32-S3
   (including Sticky, X4 Pro, X4 Classic, Paper Mono, and Metalio E-Ink 4,
-  dual-core Xtensa LX7), and classic ESP32 on SDK boards such as M5Paper v1.1
+  dual-core Xtensa LX7), ESP32-C61 (OnePage), and classic ESP32 on SDK boards
+  such as M5Paper v1.1
 * RAM: ~380KB usable on ESP32-C3, with **no PSRAM**. The `x4c` env builds with
   `BOARD_HAS_PSRAM` on an `esp32-s3-devkitc1-n16r8` profile (16 MB flash,
   8 MB PSRAM) in `platformio.ini`. OnePage (ESP32-C61) also defines
@@ -15,7 +16,8 @@
   `lib/BlePageTurner/src/RadioPolicy.h`). An `x4c` internal-heap reading does
   not show whether the same buffers fit the C3, where they come from internal
   RAM.
-  * **Single Buffer Mode**: One framebuffer sized for the runtime panel
+* **Single Buffer Mode** on every board: one framebuffer sized for the runtime
+  panel
 * X4 baseline flash: 16MB (Instruction storage and static data)
 * X4 baseline display: 800x480 E-Ink (Slow refresh, monochrome, 1-2s full update)
   * Framebuffer: 48,000 bytes (800 × 480 ÷ 8)
@@ -36,16 +38,19 @@ such as apps, against it: they may use its PSRAM and larger internal RAM.
 - When a feature needs more memory than a board has (for example the C3 or
   OnePage), compile it out of that board with a compile-time gate:
   `FREEINK_DEVICE_*`, `FREEINK_CAP_*`, or a new `-D` flag. A runtime check
-  leaves the code in the build. Put a new flag in all three envs of each
-  affected board (dev, `-gh_release` and `-gh_release_rc`). Say in the PR
-  which boards leave the feature out.
+  leaves the code in the build. Put a new flag in every env with that board's
+  `FREEINK_DEVICE_*` flag (for the C3: `default`, `gh_release`,
+  `gh_release_rc` and `slim`; for others: `<board>`, `<board>-gh_release` and
+  `<board>-gh_release_rc`). CI builds only the dev env of each board, so build
+  one release env of each affected board locally, or say in the PR that you
+  could not. Say in the PR which boards leave the feature out.
 - Changes to the shared reader core must keep working on every release
   target. Use per-board limits where needed, as `CLIPPING_MAX_PER_BOOK` in
   `src/ClippingStore.h` does.
 - Changes meant for upstream keep upstream's C3 baseline.
 
 The release targets are the boards in the `.github/workflows/release.yml`
-matrix; CI builds the same nine with the `all-boards` label. Additional SDK profiles are not automatically
+matrix. With the `all-boards` label, CI builds the dev env of each of them. Additional SDK profiles are not automatically
 CrossPoint release targets or evidence of device verification.
 
 Budget internal RAM and PSRAM separately with `HalMemory::getInternalHeap()`
