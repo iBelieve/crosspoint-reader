@@ -39,3 +39,4 @@ flake.*
 
 # Simulator smoke test output (test/simulator/smoke.py)
 /sim-artifacts/
+node_modules/

@@ -15,9 +15,9 @@ Requirements:
 
 import argparse
 import re
+import zipfile
 from collections import Counter
 from pathlib import Path
-import zipfile
 
 
 def extract_text_from_epub(epub_path):
@@ -26,11 +26,7 @@ def extract_text_from_epub(epub_path):
     with zipfile.ZipFile(epub_path, "r") as z:
         for name in z.namelist():
             lower = name.lower()
-            if (
-                lower.endswith(".xhtml")
-                or lower.endswith(".html")
-                or lower.endswith(".htm")
-            ):
+            if lower.endswith((".xhtml", ".html", ".htm")):
                 try:
                     data = z.read(name).decode("utf-8", errors="ignore")
                 except Exception:
@@ -83,7 +79,7 @@ def generate_hyphenation_data(
         print("Detected .epub input; extracting HTML content")
         text = extract_text_from_epub(input_file)
     else:
-        with open(input_file, "r", encoding="utf-8") as f:
+        with open(input_file, encoding="utf-8") as f:
             text = f.read()
 
     # Extract words
@@ -96,9 +92,7 @@ def generate_hyphenation_data(
     print(f"Found {len(word_counts)} unique words")
 
     # Initialize pyphen hyphenator
-    print(
-        f"Initializing hyphenator for language: {language} (min_prefix={min_prefix}, min_suffix={min_suffix})"
-    )
+    print(f"Initializing hyphenator for language: {language} (min_prefix={min_prefix}, min_suffix={min_suffix})")
     try:
         hyphenator = pyphen.Pyphen(lang=language, left=min_prefix, right=min_suffix)
     except KeyError:
@@ -124,9 +118,7 @@ def generate_hyphenation_data(
         # Include all words (so we can take the top N most common words even if
         # they don't have hyphenation points). This replaces the previous filter
         # which dropped words without '='.
-        hyphenation_data.append(
-            {"word": word, "hyphenated": hyphenated, "count": count}
-        )
+        hyphenation_data.append({"word": word, "hyphenated": hyphenated, "count": count})
 
         # Stop if we've reached max_words
         if max_words and len(hyphenation_data) >= max_words:
@@ -138,17 +130,17 @@ def generate_hyphenation_data(
     print(f"Writing to: {output_file}")
     with open(output_file, "w", encoding="utf-8") as f:
         # Write header with metadata
-        f.write(f"# Hyphenation Test Data\n")
+        f.write("# Hyphenation Test Data\n")
         f.write(f"# Source: {Path(input_file).name}\n")
         f.write(f"# Language: {language}\n")
         f.write(f"# Min prefix: {min_prefix}\n")
         f.write(f"# Min suffix: {min_suffix}\n")
         f.write(f"# Total words: {len(hyphenation_data)}\n")
-        f.write(f"# Format: word | hyphenated_form | frequency_in_source\n")
-        f.write(f"#\n")
-        f.write(f"# Hyphenation points are marked with '='\n")
-        f.write(f"# Example: Silbentrennung -> Sil=ben=tren=nung\n")
-        f.write(f"#\n\n")
+        f.write("# Format: word | hyphenated_form | frequency_in_source\n")
+        f.write("#\n")
+        f.write("# Hyphenation points are marked with '='\n")
+        f.write("# Example: Silbentrennung -> Sil=ben=tren=nung\n")
+        f.write("#\n\n")
 
         # Write data
         for item in hyphenation_data:
@@ -167,9 +159,7 @@ def generate_hyphenation_data(
     # Print some examples
     print("\n=== Examples (first 10) ===")
     for item in hyphenation_data[:10]:
-        print(
-            f"  {item['word']:20} -> {item['hyphenated']:30} (appears {item['count']}x)"
-        )
+        print(f"  {item['word']:20} -> {item['hyphenated']:30} (appears {item['count']}x)")
 
 
 def main():
@@ -180,10 +170,10 @@ def main():
 Examples:
   # Generate test data from a German book
   python generate_hyphenation_test_data.py ../data/books/bobiverse_1.txt hyphenation_test_data.txt
-  
+
   # Limit to 500 most common words
   python generate_hyphenation_test_data.py ../data/books/bobiverse_1.txt hyphenation_test_data.txt --max-words 500
-  
+
   # Use English hyphenation (when available)
   python generate_hyphenation_test_data.py book.txt test_en.txt --language en_US
         """,
@@ -191,12 +181,8 @@ Examples:
 
     parser.add_argument("input_file", help="Input text file to extract words from")
     parser.add_argument("output_file", help="Output file for hyphenation test data")
-    parser.add_argument(
-        "--language", default="de_DE", help="Language code (default: de_DE)"
-    )
-    parser.add_argument(
-        "--min-length", type=int, default=6, help="Minimum word length (default: 6)"
-    )
+    parser.add_argument("--language", default="de_DE", help="Language code (default: de_DE)")
+    parser.add_argument("--min-length", type=int, default=6, help="Minimum word length (default: 6)")
     parser.add_argument(
         "--max-words",
         type=int,

@@ -6,10 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
-
+from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 LIBRARY_NOTICES = {
@@ -25,9 +24,7 @@ LIBRARY_NOTICES = {
 
 
 def git(*args: str) -> str:
-    return subprocess.check_output(
-        ["git", *args], cwd=PROJECT_DIR, text=True
-    ).strip()
+    return subprocess.check_output(["git", *args], cwd=PROJECT_DIR, text=True).strip()
 
 
 def section(title: str, body: str) -> str:
@@ -44,10 +41,7 @@ def source_reference(directory: Path) -> str:
         owner = spec["owner"]
         name = metadata["name"]
         version = metadata["version"]
-        return (
-            f"https://dl.registry.platformio.org/download/{owner}/library/"
-            f"{name}/{version}/{name}-{version}.tar.gz"
-        )
+        return f"https://dl.registry.platformio.org/download/{owner}/library/{name}/{version}/{name}-{version}.tar.gz"
     # Git dependencies keep their exact URL and revision in platformio.ini.
     if directory.name == "JPEGDEC":
         return "See the JPEGDEC URL and commit in platformio.ini."
@@ -85,8 +79,7 @@ def build_license(environment: str, repository: str, packages_dir: Path) -> str:
     for name, filenames in LIBRARY_NOTICES.items():
         directory = dependencies / name
         dependency_sources.extend(
-            path for path in (directory / "src").rglob("*")
-            if path.suffix in {".h", ".c", ".cpp"}
+            path for path in (directory / "src").rglob("*") if path.suffix in {".h", ".c", ".cpp"}
         )
         text += section(f"{name}: source package", source_reference(directory))
         for filename in filenames:
@@ -95,9 +88,8 @@ def build_license(environment: str, repository: str, packages_dir: Path) -> str:
                 (directory / filename).read_text(encoding="utf-8-sig"),
             )
         for path in sorted(directory.rglob("*")):
-            if path.is_file() and path.name.upper() in {"LICENSE", "NOTICE", "COPYING"}:
-                if path.parent != directory:
-                    text += section(f"{name}/{path.relative_to(directory)}", path.read_text())
+            if path.is_file() and path.name.upper() in {"LICENSE", "NOTICE", "COPYING"} and path.parent != directory:
+                text += section(f"{name}/{path.relative_to(directory)}", path.read_text())
 
     framework = packages_dir / "framework-arduinoespressif32"
     text += section("Arduino-ESP32: source package", source_reference(framework))
@@ -113,7 +105,9 @@ def build_license(environment: str, repository: str, packages_dir: Path) -> str:
 
     sdk = PROJECT_DIR / "freeink-sdk"
     for filename in (
-        "LICENSE", "NOTICE", "libs/assets/Icons/lucide/LICENSE",
+        "LICENSE",
+        "NOTICE",
+        "libs/assets/Icons/lucide/LICENSE",
         "libs/font/FreeInkFont/third_party/freetype/LICENSE.TXT",
         "libs/font/FreeInkFont/third_party/freetype/FTL.TXT",
     ):
@@ -139,8 +133,19 @@ def build_license(environment: str, repository: str, packages_dir: Path) -> str:
     if tinyusb.is_file():
         paths.append(tinyusb)
     for name in (
-        "AsyncUDP", "DNSServer", "ESPmDNS", "Ethernet", "FS", "Hash", "Network",
-        "NetworkClientSecure", "Preferences", "SPI", "WebServer", "WiFi", "Wire",
+        "AsyncUDP",
+        "DNSServer",
+        "ESPmDNS",
+        "Ethernet",
+        "FS",
+        "Hash",
+        "Network",
+        "NetworkClientSecure",
+        "Preferences",
+        "SPI",
+        "WebServer",
+        "WiFi",
+        "Wire",
     ):
         paths.extend((framework / "libraries" / name / "src").rglob("*.h"))
         paths.extend((framework / "libraries" / name / "src").rglob("*.cpp"))
@@ -149,16 +154,15 @@ def build_license(environment: str, repository: str, packages_dir: Path) -> str:
         source = path.read_text(encoding="utf-8")
         for match in re.finditer(r"/\*.*?\*/", source, re.DOTALL):
             notice = match.group()
-            if re.search(r"copyright|permission is|ALTERNATIVE [AB]", notice, re.IGNORECASE):
-                if notice not in notices:
-                    if path.is_relative_to(framework):
-                        label = Path("Arduino-ESP32") / path.relative_to(framework)
-                    elif path.is_relative_to(packages_dir):
-                        label = path.relative_to(packages_dir)
-                    else:
-                        label = path.relative_to(PROJECT_DIR)
-                    text += section(str(label), notice)
-                    notices.add(notice)
+            if notice not in notices and re.search(r"copyright|permission is|ALTERNATIVE [AB]", notice, re.IGNORECASE):
+                if path.is_relative_to(framework):
+                    label = Path("Arduino-ESP32") / path.relative_to(framework)
+                elif path.is_relative_to(packages_dir):
+                    label = path.relative_to(packages_dir)
+                else:
+                    label = path.relative_to(PROJECT_DIR)
+                text += section(str(label), notice)
+                notices.add(notice)
     return text
 
 
@@ -167,7 +171,8 @@ def main() -> None:
     parser.add_argument("--env", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
-        "--packages-dir", type=Path,
+        "--packages-dir",
+        type=Path,
         default=Path(os.environ.get("PLATFORMIO_CORE_DIR", Path.home() / ".platformio")) / "packages",
     )
     parser.add_argument(

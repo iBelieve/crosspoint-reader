@@ -21,10 +21,13 @@ def make_sample_epub(path):
     chapters = [("One", PAGE_ONE_WORD), ("Two", PAGE_TWO_WORD)]
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as epub:
         epub.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
-        epub.writestr("META-INF/container.xml", """<?xml version="1.0"?>
+        epub.writestr(
+            "META-INF/container.xml",
+            """<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
-</container>""")
+</container>""",
+        )
         manifest = []
         spine = []
         for i, (title, word) in enumerate(chapters):
@@ -34,14 +37,21 @@ def make_sample_epub(path):
         manifest.append('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
         points = "".join(
             f'<navPoint id="n{i}" playOrder="{i + 1}"><navLabel><text>{title}</text></navLabel>'
-            f'<content src="c{i}.xhtml"/></navPoint>' for i, (title, _) in enumerate(chapters))
-        epub.writestr("OEBPS/toc.ncx", f"""<?xml version="1.0" encoding="UTF-8"?>
+            f'<content src="c{i}.xhtml"/></navPoint>'
+            for i, (title, _) in enumerate(chapters)
+        )
+        epub.writestr(
+            "OEBPS/toc.ncx",
+            f"""<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <head><meta name="dtb:uid" content="crosspoint-simulator-smoke"/></head>
   <docTitle><text>Simulator Smoke</text></docTitle>
   <navMap>{points}</navMap>
-</ncx>""")
-        epub.writestr("OEBPS/content.opf", f"""<?xml version="1.0"?>
+</ncx>""",
+        )
+        epub.writestr(
+            "OEBPS/content.opf",
+            f"""<?xml version="1.0"?>
 <package version="2.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:title>Simulator Smoke</dc:title>
@@ -50,4 +60,5 @@ def make_sample_epub(path):
   </metadata>
   <manifest>{"".join(manifest)}</manifest>
   <spine toc="ncx">{"".join(spine)}</spine>
-</package>""")
+</package>""",
+        )

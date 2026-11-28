@@ -1,24 +1,36 @@
 """Compile production button mapping; run with python3 test/test_side_button_orientation.py."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/MappedInputManager.cpp").read_text()
-mapping = source[source.index("bool MappedInputManager::isNavDirectionSwapped()"):
-                 source.index("namespace {", source.index("bool MappedInputManager::mapButton("))]
-mapping += source[source.index("MappedInputManager::Labels MappedInputManager::mapLabels("):
-                  source.index("int MappedInputManager::getPressedFrontButton()")]
+mapping = source[
+    source.index("bool MappedInputManager::isNavDirectionSwapped()") : source.index(
+        "namespace {", source.index("bool MappedInputManager::mapButton(")
+    )
+]
+mapping += source[
+    source.index("MappedInputManager::Labels MappedInputManager::mapLabels(") : source.index(
+        "int MappedInputManager::getPressedFrontButton()"
+    )
+]
 settings = (ROOT / "src/CrossPointSettings.cpp").read_text()
 migration_start = settings.index('  if (doc["sideButtonFollowOrientation"].isNull())')
-migration = settings[migration_start:settings.index("\n  }", migration_start) + 4]
+migration = settings[migration_start : settings.index("\n  }", migration_start) + 4]
 
 panel = (ROOT / "src/activities/util/FrontlightPanelActivity.cpp").read_text()
-preview_setup = panel[panel.index("    static constexpr fui::Rotation rotations[]"):panel.index("    const fui::Rect row = screen.takeTop(kQuickControlSize)")]
-preview_draw = panel[panel.index("      screen.target().bitmap(iconRect"):panel.index("      // A tile whose function")]
+preview_setup = panel[
+    panel.index("    static constexpr fui::Rotation rotations[]") : panel.index(
+        "    const fui::Rect row = screen.takeTop(kQuickControlSize)"
+    )
+]
+preview_draw = panel[
+    panel.index("      screen.target().bitmap(iconRect") : panel.index("      // A tile whose function")
+]
 reader = (ROOT / "src/activities/reader/ReaderUtils.h").read_text()
-detect_turn = reader[reader.index("struct FrontPageTurnButtons"):reader.index("struct TouchPageTurn")]
+detect_turn = reader[reader.index("struct FrontPageTurnButtons") : reader.index("struct TouchPageTurn")]
 
 stub = r"""
 #pragma once
@@ -34,7 +46,8 @@ struct HalGPIO {
   bool isPowerButtonPhysicallyPressed() const { return isPressed(BTN_POWER); }
 };
 """
-harness = r"""
+harness = (
+    r"""
 #include <cassert>
 #include <cstdint>
 #include <initializer_list>
@@ -75,11 +88,15 @@ bool migrate(bool missing, uint8_t savedSide) {
   Document doc{missing};
   uint8_t sideButtonFollowOrientation = savedSide;
   bool needsResave = false;
-""" + migration + r"""
+"""
+    + migration
+    + r"""
   assert(sideButtonFollowOrientation == (missing ? 0 : savedSide));
   return needsResave;
 }
-""" + mapping + r"""
+"""
+    + mapping
+    + r"""
 bool MappedInputManager::wasPressed(Button b) const { return mapButton(b, &HalGPIO::wasPressed); }
 bool MappedInputManager::wasReleased(Button b) const { return mapButton(b, &HalGPIO::wasReleased); }
 bool MappedInputManager::wasLongPressed(Button, unsigned long) const { return false; }
@@ -88,7 +105,9 @@ struct {
   bool wasTiltedBack() const { return false; }
 } halTiltSensor;
 constexpr unsigned long SKIP_HOLD_MS = 700;
-""" + detect_turn + r"""
+"""
+    + detect_turn
+    + r"""
 
 // Record the bitmap rotation and underline actually sent to the draw target.
 struct PreviewScreen {
@@ -114,7 +133,10 @@ void checkPreview(GfxRenderer& renderer) {
     for (int selected = 0; selected < 4; ++selected) {
       SETTINGS.orientation = selected;
       PreviewScreen screen;
-""" + preview_setup + preview_draw + r"""
+"""
+    + preview_setup
+    + preview_draw
+    + r"""
       const R rotation = expected[active][selected];
       assert(screen.rotation == rotation);
       const auto line = screen.underline;
@@ -210,11 +232,26 @@ int main() {
   assert(checks == 3360);
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     tmp = Path(directory)
     (tmp / "HalGPIO.h").write_text(stub)
     (tmp / "orientation.cpp").write_text(harness)
-    subprocess.run(["c++", "-std=c++20", "-Wall", "-Wextra", "-Werror", "-I" + directory,
-                    "-I" + str(ROOT / "src"), "-I" + str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"), str(tmp / "orientation.cpp"), "-o", str(tmp / "orientation")], check=True)
+    subprocess.run(
+        [
+            "c++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-I" + directory,
+            "-I" + str(ROOT / "src"),
+            "-I" + str(ROOT / "freeink-sdk/libs/ui/FreeInkUI/include"),
+            str(tmp / "orientation.cpp"),
+            "-o",
+            str(tmp / "orientation"),
+        ],
+        check=True,
+    )
     subprocess.run([str(tmp / "orientation")], check=True)
 print("Passed: front/side page turns, 3,360 button mappings, legacy settings, and all 16 rotation previews")

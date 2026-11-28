@@ -13,10 +13,10 @@ The output folder keeps the simulator log and one BMP screenshot per step.
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 from sample_book import PAGE_ONE_WORD, PAGE_TWO_WORD, make_sample_epub
 
@@ -62,8 +62,12 @@ def input_script(out):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("program", type=Path, help="simulator binary, e.g. .pio/build/simulator/program")
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "sim-artifacts",
-                        help="folder for the log and screenshots (default: sim-artifacts/ in the repo root)")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=REPO_ROOT / "sim-artifacts",
+        help="folder for the log and screenshots (default: sim-artifacts/ in the repo root)",
+    )
     args = parser.parse_args()
 
     program = args.program.resolve()
@@ -81,7 +85,9 @@ def main():
     script = input_script(out)
     # Every WAIT may use its full timeout; the margin covers startup and delays.
     run_timeout_s = script.count(":WAIT:") * WAIT_TIMEOUT_MS // 1000 + 60
-    env = {key: value for key, value in os.environ.items() if not key.startswith(("CROSSPOINT_SIM_", "CROSSPOINT_EMU_"))}
+    env = {
+        key: value for key, value in os.environ.items() if not key.startswith(("CROSSPOINT_SIM_", "CROSSPOINT_EMU_"))
+    }
     with tempfile.TemporaryDirectory(prefix="crosspoint-sim-smoke-") as temp:
         sd = Path(temp) / "sd"
         sd.mkdir()
@@ -102,8 +108,15 @@ def main():
         log_path = out / "simulator.log"
         with log_path.open("w") as log:
             try:
-                result = subprocess.run([str(program)], cwd=temp, env=env, stdout=log,
-                                        stderr=subprocess.STDOUT, timeout=run_timeout_s)
+                result = subprocess.run(
+                    [str(program)],
+                    cwd=temp,
+                    env=env,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    timeout=run_timeout_s,
+                    check=False,
+                )
                 status = result.returncode
             except subprocess.TimeoutExpired:
                 status = None

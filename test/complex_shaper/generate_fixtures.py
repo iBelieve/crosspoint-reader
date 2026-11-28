@@ -30,59 +30,86 @@ PPEM_26_6 = (16 * 150 * 64 + 36) // 72
 # (script, HarfBuzz script tag, words). A word is text, or (text, BCP 47
 # language) for a word shaped in a specific language.
 FIXTURES = [
-    ("bengali", "Beng", [
-        "কলম",            # no shaping beyond cmap
-        "কি",             # pre-base i-matra
-        "টেলিবই",          # e-matra and i-matra in one word
-        "কো", "কৌ",        # two-part vowels
-        "শকুন্তলা",         # n-ta conjunct and u below a base
-        "প্রকাশ",           # ra-phala
-        "বিদ্যাসাগর",        # ya-phala with i-matra before the cluster
-        "কর্ত্তৃক",           # reph over a doubled conjunct with ri-matra
-        "সর্ব্বোৎকৃষ্ট",        # reph, o-matra, khanda ta, ss-tta
-        "অভিজ্ঞান",          # j-nya
-        "ক্ষ", "ক্ষি",        # k-ssa with and without a matra
-        "শ্রীঈশ্বরচন্দ্র",      # ra-phala, ba-phala, ndra
-        "দ্বিতীয়",           # decomposed ya + nukta
-        "ড়", "ঢ়",          # nukta letters
-        "বাক্‌শক্তি",         # ZWNJ keeps the halant explicit
-        "চাঁদ",            # candrabindu
-        "সহোদরস্নেহ",        # s-n conjunct under e-matra
-        "গ্রীষ্মকালে",        # ra-phala, ss-ma
-        "হৃদয়", "রূপ", "রু",  # special u/uu/ri forms under ha and ra
-        "বই।",            # danda joins the run
-        "১৮৫৪",           # Bengali digits
-    ]),
-    ("devanagari", "Deva", [
-        "हिन्दी",           # i-matra before a n-da conjunct
-        "पत्रिका",          # t-ra with the i-matra before the conjunct
-        "श्री",            # sh-ra with ii-matra
-        "प्रार्थना",         # ra below, reph
-        "कृष्ण",           # vocalic r, ss-nna
-        "ज्ञान",           # j-nya
-        "द्ध", "त्र्य",      # stacked and chained conjuncts
-        "क़िला",           # nukta consonant under an i-matra
-        "र्‍य",            # eyelash ra (ZWJ)
-        "संस्कृतम्",        # anusvara, final virama
-        "लक्ष", ("लक्ष", "mr"),   # Marathi la and k-ssa
-        "झाड", ("झाड", "ne"),     # Nepali jha
-        ("९८५", "ne"),            # Nepali digits
-    ]),
-    ("tamil", "Taml", [
-        "தமிழ்",           # visible pulli
-        "கொ", "கோ", "கௌ",   # two-part vowels
-        "க்ஷ",             # the one conjunct
-        "ஸ்ரீ",             # shri ligature
-        "பொன்னியின்",       # pulli and two-part vowel in one word
-        "செல்வன்",          # e-matra before its consonant
-    ]),
-    ("sinhala", "Sinh", [
-        "සිංහල",           # anusvara, i-sign
-        "ශ්‍රී",            # rakaransaya (ZWJ)
-        "ක්‍ෂ",            # ZWJ conjunct
-        "කෝ", "කෞ",        # multi-part vowels
-        "ලංකාව",           # aa-sign after anusvara
-    ]),
+    (
+        "bengali",
+        "Beng",
+        [
+            "কলম",  # no shaping beyond cmap
+            "কি",  # pre-base i-matra
+            "টেলিবই",  # e-matra and i-matra in one word
+            "কো",
+            "কৌ",  # two-part vowels
+            "শকুন্তলা",  # n-ta conjunct and u below a base
+            "প্রকাশ",  # ra-phala
+            "বিদ্যাসাগর",  # ya-phala with i-matra before the cluster
+            "কর্ত্তৃক",  # reph over a doubled conjunct with ri-matra
+            "সর্ব্বোৎকৃষ্ট",  # reph, o-matra, khanda ta, ss-tta
+            "অভিজ্ঞান",  # j-nya
+            "ক্ষ",
+            "ক্ষি",  # k-ssa with and without a matra
+            "শ্রীঈশ্বরচন্দ্র",  # ra-phala, ba-phala, ndra
+            "দ্বিতীয়",  # decomposed ya + nukta
+            "ড়",
+            "ঢ়",  # nukta letters
+            "বাক্‌শক্তি",  # ZWNJ keeps the halant explicit
+            "চাঁদ",  # candrabindu
+            "সহোদরস্নেহ",  # s-n conjunct under e-matra
+            "গ্রীষ্মকালে",  # ra-phala, ss-ma
+            "হৃদয়",
+            "রূপ",
+            "রু",  # special u/uu/ri forms under ha and ra
+            "বই।",  # danda joins the run
+            "১৮৫৪",  # Bengali digits
+        ],
+    ),
+    (
+        "devanagari",
+        "Deva",
+        [
+            "हिन्दी",  # i-matra before a n-da conjunct
+            "पत्रिका",  # t-ra with the i-matra before the conjunct
+            "श्री",  # sh-ra with ii-matra
+            "प्रार्थना",  # ra below, reph
+            "कृष्ण",  # vocalic r, ss-nna
+            "ज्ञान",  # j-nya
+            "द्ध",
+            "त्र्य",  # stacked and chained conjuncts
+            "क़िला",  # nukta consonant under an i-matra
+            "र्‍य",  # eyelash ra (ZWJ)
+            "संस्कृतम्",  # anusvara, final virama
+            "लक्ष",
+            ("लक्ष", "mr"),  # Marathi la and k-ssa
+            "झाड",
+            ("झाड", "ne"),  # Nepali jha
+            ("९८५", "ne"),  # Nepali digits
+        ],
+    ),
+    (
+        "tamil",
+        "Taml",
+        [
+            "தமிழ்",  # visible pulli
+            "கொ",
+            "கோ",
+            "கௌ",  # two-part vowels
+            "க்ஷ",  # the one conjunct
+            "ஸ்ரீ",  # shri ligature
+            "பொன்னியின்",  # pulli and two-part vowel in one word
+            "செல்வன்",  # e-matra before its consonant
+        ],
+    ),
+    (
+        "sinhala",
+        "Sinh",
+        [
+            "සිංහල",  # anusvara, i-sign
+            "ශ්‍රී",  # rakaransaya (ZWJ)
+            "ක්‍ෂ",  # ZWJ conjunct
+            "කෝ",
+            "කෞ",  # multi-part vowels
+            "ලංකාව",  # aa-sign after anusvara
+        ],
+    ),
 ]
 
 
@@ -114,7 +141,7 @@ def main():
         "",
         "struct ExpectedShaping {",
         "  const char* utf8;",
-        "  const char* language;  // BCP 47; \"\" = none",
+        '  const char* language;  // BCP 47; "" = none',
         "  const ExpectedGlyph* glyphs;",
         "  uint8_t count;",
         "};",
@@ -156,7 +183,9 @@ def main():
             comment = f"{text} ({language})" if language else text
             table.append(f'    {{"{c_string(text)}", "{language}", k{name}Glyphs{i}, {len(glyphs)}}},  // {comment}')
         lines += ["", f"constexpr ExpectedShaping k{name}Shaping[] = {{", *table, "};", ""]
-        fixtures.append(f'    {{"{name}", "{layout_file}", k{name}Shaping, sizeof(k{name}Shaping) / sizeof(k{name}Shaping[0])}},')
+        fixtures.append(
+            f'    {{"{name}", "{layout_file}", k{name}Shaping, sizeof(k{name}Shaping) / sizeof(k{name}Shaping[0])}},'
+        )
         print(f"{layout_file}: {len(layout)} bytes, {len(words)} expected words")
     lines += ["constexpr ShapingFixture kShapingFixtures[] = {", *fixtures, "};", ""]
     (HERE / "ExpectedShaping.h").write_text("\n".join(lines))

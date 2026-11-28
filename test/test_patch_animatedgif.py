@@ -1,7 +1,7 @@
 import importlib.util
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "patch_animatedgif.py"
 SPEC = importlib.util.spec_from_file_location("patch_animatedgif", SCRIPT)

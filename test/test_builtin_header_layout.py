@@ -1,9 +1,12 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
+
+
 def source(relative):
     return (root / relative).read_text(encoding="utf-8")
+
 
 base = source("src/components/themes/BaseTheme.cpp")
 metrics = source("src/components/themes/BaseTheme.h")
@@ -12,8 +15,7 @@ rounded_metrics = source("src/components/themes/roundedraff/RoundedRaffTheme.h")
 lyra_metrics = source("src/components/themes/lyra/LyraTheme.h")
 
 # The system header's clock/battery location is independent of built-in theme metrics.
-for text in ("HEADER_STATUS_TOP = 10", "HEADER_STATUS_HEIGHT = 20",
-             "HEADER_STATUS_EDGE_INSET = 22"):
+for text in ("HEADER_STATUS_TOP = 10", "HEADER_STATUS_HEIGHT = 20", "HEADER_STATUS_EDGE_INSET = 22"):
     assert text in metrics, text
 assert "status.batteryLeft = false;" in base
 assert "status.clockCentered = false;" in base
@@ -39,8 +41,9 @@ assert "headerClockCentered = false" in lyra_metrics
 # own strip height and topPadding put them, on every theme and board offset.
 assert "const int16_t contentStrip = static_cast<int16_t>(metrics.batteryBarHeight);" in base
 assert "opticalDrop - shift);" in base
-assert ("props.titleOffsetY = static_cast<int16_t>(contentStrip / 2 + "
-        "(BoardConfig::ACTIVE.headerOffsetY - shift) / 2);") in base
+assert (
+    "props.titleOffsetY = static_cast<int16_t>(contentStrip / 2 + (BoardConfig::ACTIVE.headerOffsetY - shift) / 2);"
+) in base
 band_h, btn = 84, 48
 for padding, content_strip in ((5, 20), (10, 20), (13, 24)):
     for board_offset in (0, 6, -1):
@@ -50,10 +53,14 @@ for padding, content_strip in ((5, 20), (10, 20), (13, 24)):
         new_btn = (padding + board_offset + shift) + 4 + content_strip + (band_h - content_strip - btn) // 2 - shift
         assert new_btn == old_btn
         # Title center, doubled to stay in integers; C++ division truncates.
-        old_center2 = 2 * (padding + board_offset) + (band_h - board_offset) + 2 * (
-            content_strip // 2 + int(board_offset / 2))
-        new_center2 = 2 * (padding + board_offset + shift) + (band_h - board_offset - shift) + 2 * (
-            content_strip // 2 + int((board_offset - shift) / 2))
+        old_center2 = (
+            2 * (padding + board_offset) + (band_h - board_offset) + 2 * (content_strip // 2 + int(board_offset / 2))
+        )
+        new_center2 = (
+            2 * (padding + board_offset + shift)
+            + (band_h - board_offset - shift)
+            + 2 * (content_strip // 2 + int((board_offset - shift) / 2))
+        )
         assert abs(new_center2 - old_center2) <= 2, (padding, board_offset)
 
 # A taller RoundedRaff Home band separates the clock from the book title
@@ -77,7 +84,10 @@ assert "props.titleOffsetY = static_cast<int16_t>(std::max(0, targetTop - titleT
 # The ink-based target gives the title 12px clearance from the clock
 # whenever the compact band's cover-clearance bound does not intervene.
 for band_y, band_h, clock_h, title_h, title_line_h, title_ink_y in (
-        (16, 64, 12, 18, 24, 3), (10, 70, 12, 18, 24, 3), (18, 62, 11, 20, 27, 4)):
+    (16, 64, 12, 18, 24, 3),
+    (10, 70, 12, 18, 24, 3),
+    (18, 62, 11, 20, 27, 4),
+):
     clock_top = band_y + (20 - clock_h) // 2
     title_top = band_y + (band_h - title_line_h) // 2 + title_ink_y
     target = min(clock_top + clock_h + 12, band_y + band_h - title_h - 6)
@@ -90,7 +100,8 @@ for band_y, band_h, clock_h, title_h, title_line_h, title_ink_y in (
 # RoundedRaff's Home screen must not suppress the shared status line when
 # it draws a header without a book title.
 header = rounded.split("void RoundedRaffTheme::drawHeader(", 1)[1].split(
-    "void RoundedRaffTheme::drawRecentBookCover(", 1)[0]
+    "void RoundedRaffTheme::drawRecentBookCover(", 1
+)[0]
 # The delegation must be unconditional: an early return or a conditional
 # before the call would allow a null Home title to suppress the status row.
 delegate = "BaseTheme::drawHeader(renderer, rect, title, subtitle, backButton);"
@@ -101,14 +112,12 @@ assert not re.search(r"\b(if|switch|for|while|return|goto)\b", before_delegate)
 
 # Verify the production geometry keeps the bottom edge fixed, including for
 # short Home bands and when a board's headerOffsetY shifts the top edge.
-band = base.split("freeink::ui::Rect BaseTheme::headerBand(", 1)[1].split(
-    "void BaseTheme::drawHeader(", 1)[0]
+band = base.split("freeink::ui::Rect BaseTheme::headerBand(", 1)[1].split("void BaseTheme::drawHeader(", 1)[0]
 assert "const int16_t shift = static_cast<int16_t>(headerBandTopShift());" in band
 assert "const int16_t offset = static_cast<int16_t>(BoardConfig::ACTIVE.headerOffsetY + shift);" in band
 assert re.search(r"rect\.y\s*\+\s*offset", band)
 assert re.search(r"rect\.height\s*-\s*offset", band)
-for band_y, band_height in ((5, 84), (10, 84), (13, 84), (0, 62),
-                             (0, 76), (13, 24), (5, 51)):
+for band_y, band_height in ((5, 84), (10, 84), (13, 84), (0, 62), (0, 76), (13, 24), (5, 51)):
     for board_offset in (0, 3, 6):
         shift = 10 - band_y
         offset = board_offset + shift

@@ -64,13 +64,16 @@ commit; a pure refactor preserves behavior and goes in its own commit.
 
 ### Syncing With Upstream
 
-Upstream merges into `develop` are their own PR, with no other changes. Paths
-below are from the repository root.
+Upstream merges into `develop` are their own PR, with no other changes, except
+one lint commit for upstream Python so the required ruff job passes: run
+`ruff format` and `ruff check --fix`, then fix the rest by hand or suppress it
+with a one-line reason, and list those hand edits in the PR. Paths below are from the repository root.
 
 - **Fork-owned; keep the fork's version:** `SCOPE.md`,
   `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/`,
-  `.agents/rules/git-workflow.md`, `.agents/skills/firmware-handoff/`, and
-  `.agents/skills/scope-discipline/`. Read upstream's change for technical
+  `.agents/rules/git-workflow.md`, `.agents/skills/firmware-handoff/`,
+  `.agents/skills/scope-discipline/`, `ruff.toml`, `eslint.config.mjs`,
+  `package.json`, and `package-lock.json`. Read upstream's change for technical
   facts worth porting, but do not take its policy.
 - **Fork sections in shared files:** in `AGENTS.md`, keep the fork's "This
   fork", "How agents work here", "Verification is not optional", and "Firmware
@@ -82,6 +85,9 @@ below are from the repository root.
   `.agents/rules/ui-activities.md`, `README.md` (scope links), `ROADMAP.md`
   (note and upstream links), and `GOVERNANCE.md` (upstream scope link). Take
   upstream's other changes in these files.
+- **Fork jobs in `.github/workflows/ci.yml`:** keep the `ruff` and `eslint`
+  jobs and their entries under the Test Status job's `needs:`. Take upstream's
+  other changes to the workflow.
 - **Everything else** in `.agents/` is upstream technical guidance. Take
   upstream's version, but adapt or drop any upstream policy wording in it
   (human approval for commits, no agent PRs, interactive apps out of scope).

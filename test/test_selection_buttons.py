@@ -1,22 +1,29 @@
 """Run with python3 test/test_selection_buttons.py (requires a host C++ compiler)."""
 
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 source = (ROOT / "src/activities/reader/ClipSelectionActivity.cpp").read_text()
 header = (ROOT / "src/activities/reader/ClipSelectionActivity.h").read_text()
 # Compile the production poller with a controllable render lock and button clock.
 shared = (ROOT / "src/util/WordSelectionInput.h").read_text()
-helpers = "class WordSelectionInput" + shared.split("class WordSelectionInput", 1)[1] + "\nusing Input = WordSelectionInput;\n"
-method = "void ClipSelectionActivity::loopButtons()" + source.split(
-    "void ClipSelectionActivity::loopButtons()", 1
-)[1].split("void ClipSelectionActivity::loop()", 1)[0]
-members = "std::array<uint8_t, 16> pendingButtons" + header.split(
-    "std::array<uint8_t, 16> pendingButtons", 1
-)[1].split("  int fontId", 1)[0]
-harness = r"""
+helpers = (
+    "class WordSelectionInput"
+    + shared.split("class WordSelectionInput", 1)[1]
+    + "\nusing Input = WordSelectionInput;\n"
+)
+method = (
+    "void ClipSelectionActivity::loopButtons()"
+    + source.split("void ClipSelectionActivity::loopButtons()", 1)[1].split("void ClipSelectionActivity::loop()", 1)[0]
+)
+members = (
+    "std::array<uint8_t, 16> pendingButtons"
+    + header.split("std::array<uint8_t, 16> pendingButtons", 1)[1].split("  int fontId", 1)[0]
+)
+harness = (
+    r"""
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -39,7 +46,9 @@ struct MappedInputManager {
   bool wasReleased(Button b) const { return released & (1 << static_cast<int>(b)); }
   bool isPressed(Button b) const { return held & (1 << static_cast<int>(b)); }
 };
-""" + helpers + r"""
+"""
+    + helpers
+    + r"""
 struct ClipSelectionActivity {
   MappedInputManager mappedInput;
   int selected = 5, confirmed = -1;
@@ -49,7 +58,11 @@ struct ClipSelectionActivity {
     return false;
   }
   void loopButtons();
-""" + members + "};\n" + method + r"""
+"""
+    + members
+    + "};\n"
+    + method
+    + r"""
 int main() {
   ClipSelectionActivity activity;
   auto poll = [&](uint32_t time, uint8_t pressed, uint8_t held, uint8_t released = 0) {
@@ -99,18 +112,22 @@ int main() {
   assert(activity.selected == 23 && activity.pendingButtonCount == 0);
 }
 """
+)
 # Exercise the empty selector's production popup path, including dismissal without a callback.
-loop_prefix = "void ClipSelectionActivity::loop() {" + source.split(
-    "void ClipSelectionActivity::loop() {", 1
-)[1].split("  int touchX = 0;", 1)[0] + "}\n"
+loop_prefix = (
+    "void ClipSelectionActivity::loop() {"
+    + source.split("void ClipSelectionActivity::loop() {", 1)[1].split("  int touchX = 0;", 1)[0]
+    + "}\n"
+)
 popup_source = (ROOT / "src/components/OptionPopup.h").read_text()
-popup_buttons = "  bool handleButtons(" + popup_source.split("  bool handleButtons(", 1)[1].split(
-    "  bool processRender(", 1
-)[0]
-popup_confirm = "  void confirmSelection()" + popup_source.split("  void confirmSelection()", 1)[1].split(
-    "  void activate(", 1
-)[0]
-popup_harness = r"""
+popup_buttons = (
+    "  bool handleButtons(" + popup_source.split("  bool handleButtons(", 1)[1].split("  bool processRender(", 1)[0]
+)
+popup_confirm = (
+    "  void confirmSelection()" + popup_source.split("  void confirmSelection()", 1)[1].split("  void activate(", 1)[0]
+)
+popup_harness = (
+    r"""
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -129,7 +146,10 @@ struct Popup {
   std::vector<int> ownedStrings{0};
   std::function<void(int)> onSelectCallback;
   bool isActive() const { return active; }
-""" + popup_buttons + popup_confirm + r"""
+"""
+    + popup_buttons
+    + popup_confirm
+    + r"""
   // Model an outside release after the shared touch router finds no dialog hit.
   bool handleInput(const Input& input, const std::function<void()>& update) {
     if (active && input.outsideTap) { active = false; update(); return true; }
@@ -148,7 +168,9 @@ struct ClipSelectionActivity {
   }
   void loop();
 };
-""" + loop_prefix + r"""
+"""
+    + loop_prefix
+    + r"""
 int main() {
   for (const bool touch : {false, true}) {
     ClipSelectionActivity selection;
@@ -190,6 +212,7 @@ int main() {
   assert(usable.cancellations == 0);
 }
 """
+)
 with tempfile.TemporaryDirectory() as directory:
     cpp = Path(directory) / "selection.cpp"
     executable = Path(directory) / "selection"
