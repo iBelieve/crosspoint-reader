@@ -178,15 +178,26 @@ std::unique_ptr<TextBlock> loadDamagedRuby(void (*damage)(std::string& bytes, si
   std::string bytes;
   {
     std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) {
+      ADD_FAILURE() << "cannot reopen " << path;
+      return nullptr;
+    }
     char buf[4096];
     for (size_t n; (n = std::fread(buf, 1, sizeof(buf), f)) > 0;) bytes.append(buf, n);
     std::fclose(f);
   }
   const size_t ruby = bytes.find("rubytext");
-  EXPECT_NE(ruby, std::string::npos);
+  if (ruby == std::string::npos) {
+    ADD_FAILURE() << "ruby text not found in the serialized block";
+    return nullptr;
+  }
   damage(bytes, ruby - sizeof(uint32_t));
   {
     std::FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) {
+      ADD_FAILURE() << "cannot rewrite " << path;
+      return nullptr;
+    }
     std::fwrite(bytes.data(), 1, bytes.size(), f);
     std::fclose(f);
   }

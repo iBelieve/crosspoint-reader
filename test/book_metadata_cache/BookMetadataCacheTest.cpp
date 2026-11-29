@@ -207,6 +207,8 @@ TEST(BookMetadataCacheStrings, OverLongStringsAreCutAndTheRestStillLoads) {
     BookMetadataCache::BookMetadata metadata;
     metadata.title = longTitle;
     metadata.author = "Author";
+    metadata.coverItemHref = std::string(serialization::MAX_STRING_BYTES + 1, 'c');  // a cut path would miss
+    metadata.textReferenceHref = "OEBPS/Text/start.xhtml";
     ASSERT_TRUE(cache.buildBookBin("book.epub", metadata));
     ASSERT_TRUE(cache.cleanupTmpFiles());
   }
@@ -214,6 +216,8 @@ TEST(BookMetadataCacheStrings, OverLongStringsAreCutAndTheRestStillLoads) {
   ASSERT_TRUE(cache.load());
   EXPECT_EQ(cache.coreMetadata.title, longTitle.substr(0, serialization::MAX_STRING_BYTES));
   EXPECT_EQ(cache.coreMetadata.author, "Author");
+  EXPECT_TRUE(cache.coreMetadata.coverItemHref.empty());
+  EXPECT_EQ(cache.coreMetadata.textReferenceHref, "OEBPS/Text/start.xhtml");
   EXPECT_EQ(cache.getTocEntry(0).title, longTitle.substr(0, serialization::MAX_STRING_BYTES));
   EXPECT_EQ(cache.getTocEntry(1).title, "Chapter 1");
   EXPECT_EQ(cache.getSpineEntry(2).href, chapterHref(2));

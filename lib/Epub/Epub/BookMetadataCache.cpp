@@ -198,9 +198,12 @@ bool BookMetadataCache::buildBookBin(const std::string& epubPath, const BookMeta
   constexpr uint32_t headerASize =
       sizeof(BOOK_CACHE_VERSION) + /* LUT Offset */ sizeof(uint32_t) + sizeof(spineCount) + sizeof(tocCount);
   using serialization::cappedStringLength;
+  using serialization::keyOrEmpty;
+  const std::string& coverHref = keyOrEmpty(metadata.coverItemHref);
+  const std::string& textReferenceHref = keyOrEmpty(metadata.textReferenceHref);
   const uint32_t metadataSize = cappedStringLength(metadata.title) + cappedStringLength(metadata.author) +
-                                cappedStringLength(metadata.language) + cappedStringLength(metadata.coverItemHref) +
-                                cappedStringLength(metadata.textReferenceHref) + sizeof(uint32_t) * 5;
+                                cappedStringLength(metadata.language) + coverHref.size() + textReferenceHref.size() +
+                                sizeof(uint32_t) * 5;
   const uint32_t lutSize = sizeof(uint32_t) * spineCount + sizeof(uint32_t) * tocCount;
   const uint32_t lutOffset = headerASize + metadataSize;
 
@@ -213,8 +216,8 @@ bool BookMetadataCache::buildBookBin(const std::string& epubPath, const BookMeta
   serialization::writeString(bookOut, metadata.title);
   serialization::writeString(bookOut, metadata.author);
   serialization::writeString(bookOut, metadata.language);
-  serialization::writeString(bookOut, metadata.coverItemHref);
-  serialization::writeString(bookOut, metadata.textReferenceHref);
+  serialization::writeString(bookOut, coverHref);
+  serialization::writeString(bookOut, textReferenceHref);
 
   // A cut-off or corrupt tmp entry fails the build below; the loops run on so
   // every path reaches the same cleanup.
@@ -460,9 +463,9 @@ void BookMetadataCache::createTocEntry(const std::string& title, const std::stri
 
   // Compose the title to NFC at index time so the cache stores precomposed glyphs;
   // device fonts have no combining-mark positioning, so NFD titles render broken.
-  // A cut href or anchor would match the wrong target; an over-long one opens the chapter start.
-  const auto key = [](const std::string& s) { return s.size() <= serialization::MAX_STRING_BYTES ? s : std::string(); };
-  const TocEntry entry(utf8ComposeNfc(title), key(href), key(anchor), level, spineIndex);
+  // An over-long href or anchor is stored empty, so the entry opens the chapter start.
+  using serialization::keyOrEmpty;
+  const TocEntry entry(utf8ComposeNfc(title), keyOrEmpty(href), keyOrEmpty(anchor), level, spineIndex);
   if (passOut) {
     writeTocEntryTo(*passOut, entry);
   } else {

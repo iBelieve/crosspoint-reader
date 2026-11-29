@@ -50,6 +50,13 @@ inline uint32_t cappedStringLength(const std::string& s) {
   return static_cast<uint32_t>(len);
 }
 
+// For strings used as lookup keys (paths, anchors): a cut key could match the
+// wrong target, so an over-long one is stored empty instead.
+inline const std::string& keyOrEmpty(const std::string& s) {
+  static const std::string kEmpty;
+  return s.size() <= MAX_STRING_BYTES ? s : kEmpty;
+}
+
 inline void writeString(std::ostream& os, const std::string& s) {
   const uint32_t len = cappedStringLength(s);
   writePod(os, len);
