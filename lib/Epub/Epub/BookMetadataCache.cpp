@@ -518,7 +518,7 @@ bool BookMetadataCache::load() {
     if (i % SIZE_WINDOW == 0) windowStarts.push_back(bookSize);
     uint32_t hrefLen;
     int16_t tocIndex;
-    // An href the entry readers would reject (old uncapped cache or corruption) forces a rebuild.
+    // A corrupt href length the entry readers would reject forces a rebuild.
     if (!serialization::tryReadPod(bookFile, hrefLen) || hrefLen > serialization::MAX_STRING_BYTES ||
         hrefLen > fileSize - bookFile.position() || !bookFile.seekCur(hrefLen) ||
         !serialization::tryReadPod(bookFile, bookSize) || !serialization::tryReadPod(bookFile, tocIndex)) {
